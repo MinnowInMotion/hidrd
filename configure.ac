@@ -19,18 +19,53 @@
 #
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ(2.68)
 AC_INIT([hidrd], [0.2])
 AC_CONFIG_AUX_DIR([auxdir])
-AM_INIT_AUTOMAKE([1.9 -Wall foreign])
+AM_INIT_AUTOMAKE([1.14 -Wall foreign -Wno-portability])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4/autoconf])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-# To have empty CFLAGS instead of undefined and '-g -O2' by default
 CFLAGS=$CFLAGS
-CFLAGS="-Os -Wall -Wextra -Werror $CFLAGS"
+# To have empty CFLAGS instead of undefined and '-g -O2' by default
+
+build_os=`uname -s`
+target_os=$target
+
+AC_MSG_RESULT([checking build system: ${build_os}])
+
+AM_CONDITIONAL([TARGET_OS], [test "x$target_os"  != ""])
+
+
+AC_SEARCH_LIBS([dlopen], [dl dld], [], [
+  AC_MSG_ERROR([unable to find the dlopen() function])
+])
+
+
+AC_CHECK_HEADERS([obstack.h], [found_obstack_headers=yes; break;])
+AM_CONDITIONAL(ADD_OBSTACK, [test x$found_obstack_headers != xyes])
+
+#AM_CONDITIONAL([MINGW_FIX], [test "x$target_os" = xmingw])
+#AM_COND_IF([MINGW_FIX],
+#[AC_MSG_RESULT([configure: MinGW Strings])
+#AC_DEFINE(snprintf, __mingw_printf , mingw uses its own snprintf function)
+#AC_DEFINE( __USE_MINGW_ANSI_STDIO , 0 , disablevsnprintf in various headers)
+#])
+
+AC_HEADER_STDC
+
+
+AC_MSG_CHECKING(whether program_invocation_short_name is defined)
+AC_TRY_COMPILE([#include <argp.h>],
+               [program_invocation_short_name = "test";],
+               AC_DEFINE(HAVE_PROGRAM_INVOCATION_SHORT_NAME, 1,
+                [Define if program_invocation_short_name is defined])
+                AC_MSG_RESULT(yes),
+               AC_MSG_RESULT(no))
+
+
 ABS_SRCDIR=`cd ${srcdir} ; pwd`
 ABS_BUILDDIR=`pwd`
 CPPFLAGS="-I${ABS_BUILDDIR} -I${ABS_BUILDDIR}/include -D_GNU_SOURCE -DNDEBUG $CPPFLAGS"
@@ -38,44 +73,134 @@ if test "$ABS_SRCDIR" != "$ABS_BUILDDIR"; then
     CPPFLAGS="-I${ABS_SRCDIR}/include $CPPFLAGS"
 fi
 
+AH_BOTTOM([
+/* Temporary fix to allow Mingw32 to compile
+*   @author Anthony Campbell <contact@claydonkey.com>
+*   Android is Assumed to be Cross compilation and as such will not test for bcopy locally
+*/
+#if  !defined(HAVE_BCOPY)
+    #if defined(HAVE_ANDROID)
+      #define bcopy(b1, b2, len) (void)(__builtin_memmove((b2), (b1), (len)))
+    #else
+      #define bcopy(b1, b2, len) memcpy(b2, b1, len)
+    #endif
+#endif
+ #if !defined(HAVE_ANDROID)
+    #if  !defined(HAVE_ASPRINTF)
+        #define asprintf(strp,fmt,...) sprintf(*strp,fmt,__VA_ARGS__)
+    #endif
+    #if  !defined(HAVE_VASPRINTF)
+        #define vasprintf(strp,fmt,va_list ) vsprintf(*strp,fmt,va_list )
+    #endif
+#endif
 
+])
 #
 # Checks for programs.
 #
 AC_PROG_CC
 AC_PROG_INSTALL
+AC_PROG_MKDIR_P
+
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
-LT_INIT
+
+
+LT_INIT(shared static [win32-dll])
+AM_COND_IF([TARGET_OS],,  [case "$build_os" in  MINGW* | MSYS* | cygwin* | msys* | mingw* | cegcc*) target_os=mingw ;;  esac])
+
+case "$target_os" in
+    MINGW* | cygwin* | msys* | mingw* | cegcc*)
+        CFLAGS="-Wno-format  -Wall -Wextra  -DHAVE_CONFIG_H -static  $CFLAGS"
+        LDFLAGS="$LDFLAGS -Wl,--no-undefined"
+       AC_MSG_RESULT([configure: Flags for MINGW MSYS CYGWIN])
+    ;;
+    *android* | *ANDROID*)
+        CFLAGS="-fPIE -fPIC -Wall -Wextra -DHAVE_CONFIG_H $CFLAGS"
+        LDFLAGS="$LDFLAGS -pie -llog"
+       AC_MSG_RESULT([configure: Flags for ANDROID])
+    ;;
+        *)
+        CFLAGS="-Wall -Wextra -Werror -DHAVE_CONFIG_H $CFLAGS"
+       AC_MSG_RESULT([configure: Flags for GENERIC LINUX])
+    ;;
+esac
+
+
+AC_MSG_RESULT([target os: ${target_os}])
 
 #
 # Checks for libraries.
 #
-AC_ARG_WITH(xml2-config,
-            AC_HELP_STRING([--with-xml2-config=PATH],
-                           [Specify xml2-config location @<:@default=$PATH@:>@]),
-            [],
-            [with_xml2_config=check])
 
-XML2_CONFIG=
-AS_IF([test "x$with_xml2_config" = "xcheck"],
-      [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
-      [test "x$with_xml2_config" != "xno"],
-      [XML2_CONFIG="$with_xml2_config"])
+LIBXML2_VERSION_MIN=2.6.11
 
-AM_CONDITIONAL([WITH_LIBXML2], [test -n "$XML2_CONFIG"])
+have_libxml2="1"
 
-LIBXML2_LIBS=
-LIBXML2_CFLAGS=
-if [test -n "$XML2_CONFIG"]; then
-    $XML2_CONFIG --version >/dev/null ||
-        AC_MSG_ERROR([cannot execute $XML2_CONFIG])
-
-    LIBXML2_LIBS="`$XML2_CONFIG --libs`"
-    LIBXML2_CFLAGS="`$XML2_CONFIG --cflags`"
+AC_ARG_WITH([xml2-config], [  --with-xml2-config      libxml2 config program],
+if test "x${with_xml2_config}" = "xno" ; then
+  XML2_CONFIG=
+else
+  XML2_CONFIG="${with_xml2_config}"
 fi
+,
+  XML2_CONFIG=
+)
+if test "x${XML2_CONFIG}" != "x" ; then
+   if test ! -x "${XML2_CONFIG}" ; then
+     AC_MSG_ERROR([Unusable or missing xml2-config: ${XML2_CONFIG}])
+   fi
+else
+  AC_PATH_PROG([XML2_CONFIG], [xml2-config], , [${PATH}])
+  if test "x${XML2_CONFIG}" = "x" ; then
+    AC_MSG_ERROR([Cannot configure without xml2-config])
+  fi
+fi
+
+# Make sure the version of libxml2 found is sufficient.
+
+
+
+AC_MSG_CHECKING([for libxml >= ${LIBXML2_VERSION_MIN}])
+LIBXML2_FOUND=`2>&1 ${XML2_CONFIG} --version`
+LIBXML2_MAJOR=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $1}'`
+LIBXML2_MINOR=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $2}' | tr a-z " " |awk '{print $1}'`
+LIBXML2_BRANCH=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $3}' | tr a-z " " |awk '{print $1}'`
+if test "x${LIBXML2_BRANCH}" = "x" ; then
+  LIBXML2_BRANCH=0
+fi
+LIBXML2_MAJOR_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $1}'`
+LIBXML2_MINOR_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $2}'`
+LIBXML2_BRANCH_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $3}'`
+if test ${LIBXML2_MAJOR} -gt ${LIBXML2_MAJOR_MIN} \
+     -o ${LIBXML2_MAJOR} -eq ${LIBXML2_MAJOR_MIN} \
+     -a ${LIBXML2_MINOR} -gt ${LIBXML2_MINOR_MIN} \
+     -o ${LIBXML2_MAJOR} -eq ${LIBXML2_MAJOR_MIN} \
+     -a ${LIBXML2_MINOR} -eq ${LIBXML2_MINOR_MIN} \
+     -a ${LIBXML2_BRANCH} -ge $LIBXML2_BRANCH_MIN ; then
+  AC_MSG_RESULT([${LIBXML2_MAJOR}.${LIBXML2_MINOR}.${LIBXML2_BRANCH}])
+  have_libxml2="1"
+  CPPFLAGS="${CPPFLAGS} `${XML2_CONFIG} --cflags`"
+  LIBXML2_LIBS="`${XML2_CONFIG} --libs`"
+  LIBS="${LIBS} `${XML2_CONFIG} --libs`"
+  LIBXML2_CFLAGS="`${XML2_CONFIG} --cflags`"
+else
+  AC_MSG_RESULT([no])
+  have_libxml2="0"
+fi
+if test "x${have_libxml2}" = "x1" ; then
+  dnl Final sanity check, to make sure that xmlwriter is present.
+  AC_CHECK_HEADER([libxml/xmlwriter.h], , [have_libxml2="0"])
+fi
+if test "x${have_libxml2}" = "x0" ; then
+  AC_MSG_ERROR([Cannot build without libxml2])
+fi
+
+ 
 AC_SUBST(LIBXML2_LIBS)
 AC_SUBST(LIBXML2_CFLAGS)
-
+ 
+AC_MSG_RESULT([libxml libs: ${LIBXML2_LIBS}])
+AC_MSG_RESULT([libxml cflags: ${LIBXML2_CFLAGS}])
 #
 # Checks for features
 #
@@ -143,6 +268,46 @@ AC_ARG_ENABLE(
         [disable building source code format support (requires specification example format)]),
     [], [enable_code_format="yes"])
 
+AC_CANONICAL_HOST
+
+case $host_os in
+     *android*)
+        enable_android=yes
+        ;;
+     '')
+        enable_android=no
+        ;;
+     *)
+        AC_MSG_NOTICE([android not present])
+        ;;
+esac
+
+
+if test "$enable_android" == "yes"; then
+  AC_MSG_NOTICE([ANDROID is enabled])
+  AC_DEFINE(HAVE_ANDROID,1,[Define android])
+fi
+
+#Check ARMEABI
+AC_ARG_VAR(ARMEABI, set the armeabi jniLibs sub folder)
+ #AC_ARG_ENABLE([armeabi],
+ #[  --enable-armeabi    Turn on armeabi],
+# [case "${enableval}" in
+#   yes) armeabi=true ;;
+#   no)  armeabi=false ;;
+#   *) AC_MSG_ERROR([bad value ${enableval} for --enable-armeabi]) ;;
+# esac]
+#,[armeabi=false])
+# AM_CONDITIONAL([ARMEABI], [test x$armeabi = xtrue])
+
+#check for asprintf and vasprintf - Android - Historically bionic exposed these. 
+AC_CHECK_FUNC([asprintf],AC_DEFINE([HAVE_ASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,) 
+AC_CHECK_FUNC([vasprintf],AC_DEFINE([HAVE_VASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,)
+
+AC_CHECK_FUNC([bcopy],AC_DEFINE([HAVE_BCOPY], [], [mingw32 has no posix bcopy use memcopy instead.
+ Android libc++ has moved this to a macro in NDK r11]) ,)
+
+
 # Check for stream library dependencies
 if test "$enable_streams" = "yes"; then
     if test "$enable_opt" != "yes"; then
@@ -206,17 +371,24 @@ if test "$enable_hidrd_convert" = "yes"; then
     fi
 fi
 
+
 # Output features to automake
 AM_CONDITIONAL([ENABLE_TESTS_INSTALL], [test "$enable_tests_install" = "yes"])
 AM_CONDITIONAL([ENABLE_OPT], [test "$enable_opt" = "yes"])
 AM_CONDITIONAL([ENABLE_STRM], [test "$enable_streams" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT], [test "$enable_formats" = "yes"])
+AM_CONDITIONAL([ENABLE_ADR], [test "$enable_android" == "yes"])
 AM_CONDITIONAL([ENABLE_HIDRD_CONVERT], [test "$enable_hidrd_convert" = "yes"])
 AM_CONDITIONAL([ENABLE_TOKENS], [test "$enable_tokens" = "yes"])
 AM_CONDITIONAL([ENABLE_NAMES], [test "$enable_names" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT_XML], [test "$enable_xml_format" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT_SPEC], [test "$enable_spec_format" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT_CODE], [test "$enable_code_format" = "yes"])
+
+# Remove Unicode reference for android
+AM_CONDITIONAL(AH_VERBATIM([ENABLED_LIBXML_ICU], [#ifdef LIBXML_ICU_ENABLED
+  #undef LIBXML_ICU_ENABLED
+#endif]),[test "$enable_android" = "yes"])
 
 # Output features to preprocessor and compiler
 if test "$enable_debug" = "yes"; then
@@ -276,6 +448,8 @@ AC_CONFIG_FILES([Makefile
                  include/hidrd/fmt/spec/snk/Makefile
                  include/hidrd/fmt/code/Makefile
                  include/hidrd/usage/Makefile
+                 include/hidrd/adr/Makefile
+
 
                  lib/Makefile
                  lib/util/Makefile
@@ -295,6 +469,7 @@ AC_CONFIG_FILES([Makefile
                  lib/fmt/spec/Makefile
                  lib/fmt/spec/snk/Makefile
                  lib/fmt/code/Makefile
+                 lib/adr/Makefile
                  lib/usage/Makefile
 
                  src/Makefile])

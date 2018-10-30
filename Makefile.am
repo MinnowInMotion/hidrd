@@ -1,6 +1,6 @@
 # Copyright (C) 2009-2010 Nikolai Kondrashov
-#
-# This file is part of hidrd.
+# Additions (C) 2015 Anthony Campbell
+# This file is part of hidrd and hidrd-android
 #
 # Hidrd is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,28 @@
 
 SUBDIRS = m4 db include lib src
 
+bootstrap:
+
 dist_noinst_SCRIPTS = bootstrap distcheck-all
 
 ACLOCAL_AMFLAGS = -I m4/autoconf
+
+if ENABLE_ADR
+	
+install-exec-am:
+
+	@echo "Create jniLibs + arch directory and copy libraries"
+	$(MKDIR_P) ${srcdir}/../../hidrd-android/app/src/main/jniLibs/${ARMEABI}
+	@echo "Copy Libraries to Android JniLibs Directory"
+#NB android only allow .so extensions in jniLibs upload...
+	-$(INSTALL) -m 0644 ${DESTDIR}/${bindir}/hidrd-convert ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}/libhidrd-convert.so
+	-$(INSTALL) -m 0644 ${DESTDIR}/${libdir}/libhidrd*.so ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}
+	
+install-data-am:
+	@echo "Copy data to android resources directory"
+	-$(INSTALL) -m 0644 ${DESTDIR}/${datadir}/xml/schema/hidrd.xsd ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.xml ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.code ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.hex ${srcdir}/android/gradle-app/src/main/assets
+
+endif

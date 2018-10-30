@@ -132,7 +132,7 @@ xml_snk_element_commit(hidrd_xml_snk_inst *xml_snk,
                        bool                 container)
 {
     assert(xml_snk->cur != NULL);
-    
+
     if (container)
         xml_snk->prnt = xml_snk->cur;
 

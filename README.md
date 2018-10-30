@@ -1,3 +1,9 @@
+Hidrd (android + mingw)
+=======================
+
+This is a fork of the original with fixes for android and MinGW
+It is primarily for use with the hidrd-android repo.
+
 Hidrd
 =====
 

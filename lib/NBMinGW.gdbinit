@@ -1,0 +1,3 @@
+set sysroot C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib
+set solib-search-path C:\\msys2\\android64\\lib;..\\tools\\System;..\\android\\libs\\arm64-v8a;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib;C:\\msys2\\android64\\sysroot-HuaweiP8\\vendor\\lib;C:\\msys2\\android64\\sysroot\\usr;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\egl;adr\\.libs;util\\.libs;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\hw;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\helix;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\egl;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\drm;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\soundfx;C:\\msys2\\android64\\sysroot-HuaweiP8\\system\\lib\\ssl;
+handle SIG33 nostop noprint pass
