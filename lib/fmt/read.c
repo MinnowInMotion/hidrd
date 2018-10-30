@@ -30,167 +30,155 @@
 #include "hidrd/util/fd.h"
 #include "hidrd/fmt/list.h"
 
+#if HAVE_CONFIG_H
+#include <config.h>
+#if defined HAVE_ANDROID
+#include "hidrd/adr/adr.h"
+#endif
+#if !defined HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#define program_invocation_short_name   strrchr(argv[0], '/')
+#endif
+#endif
+
 static int
-usage(FILE *stream, const char *progname)
-{
-    return 
-        fprintf(
-            stream, 
-            "Usage: %s [INPUT_FORMAT [INPUT_OPTS [INPUT [OUTPUT]]]]\n"
-            "Convert a HID report descriptor from "
-            "INPUT_FORMAT to native format.\n"
-            "With no INPUT, or when INPUT is -, read standard input.\n"
-            "With no OUTPUT, or when OUTPUT is -, write standard output.\n"
-            "\n",
-            progname);
+usage(FILE *stream, const char *progname) {
+  return
+  fprintf(
+          stream,
+          "Usage: %s [INPUT_FORMAT [INPUT_OPTS [INPUT [OUTPUT]]]]\n"
+          "Convert a HID report descriptor from "
+          "INPUT_FORMAT to native format.\n"
+          "With no INPUT, or when INPUT is -, read standard input.\n"
+          "With no OUTPUT, or when OUTPUT is -, write standard output.\n"
+          "\n",
+          progname);
 }
 
+int main(int argc, char **argv) {
+  int result = 1;
 
-int
-main(int argc, char **argv)
-{
-    int                 result              = 1;
+  const char *input_format_name = "natv";
+  const hidrd_fmt *input_format = NULL;
+  const char *input_options = "";
+  const char *input_name = "-";
+  int input_fd = -1;
+  void *input_buf = NULL;
+  size_t input_size = 0;
+  hidrd_src *input = NULL;
 
-    const char         *input_format_name   = "natv";
-    const hidrd_fmt    *input_format        = NULL;
-    const char         *input_options       = "";
-    const char         *input_name          = "-";
-    int                 input_fd            = -1;
-    void               *input_buf           = NULL;
-    size_t              input_size          = 0;
-    hidrd_src          *input               = NULL;
+  const char *output_name = "-";
+  int output_fd = -1;
 
-    const char         *output_name         = "-";
-    int                 output_fd           = -1;
+  const hidrd_item *item;
+  const char **argp_list[] = {&input_format_name, &input_options, &input_name, &output_name};
+  size_t i;
 
-    const hidrd_item   *item;
+  char *err = NULL;
 
-    const char        **argp_list[]         = {&input_format_name,
-                                               &input_options,
-                                               &input_name,
-                                               &output_name};
-    size_t              i;
+  /*
+   * Collect arguments
+   */
+  for (argc--, argv++, i = 0; argc > 0 && i < sizeof (argp_list) / sizeof (*argp_list); argc--, argv++, i++)
+    *argp_list[i] = *argv;
+  if (argc > 0) {
+    usage(stderr, program_invocation_short_name);
+    goto cleanup;
+  }
 
-    char               *err                 = NULL;
+  /*
+   * Lookup input format
+   */
+  input_format = hidrd_fmt_list_lkp(input_format_name);
+  if (input_format == NULL) {
+    fprintf(stderr, "Input format \"%s\" not found\n", input_format_name);
+    goto cleanup;
+  }
 
-    /*
-     * Collect arguments
-     */
-    for (argc--, argv++, i = 0;
-         argc > 0 && i < sizeof(argp_list) / sizeof(*argp_list);
-         argc--, argv++, i++)
-        *argp_list[i] = *argv;
-    if (argc > 0)
-    {
-        usage(stderr, program_invocation_short_name);
-        goto cleanup;
+  /* Initialize input format */
+  hidrd_fmt_init(input_format);
+
+  /* Check that input format supports reading */
+  if (!hidrd_fmt_readable(input_format)) {
+    fprintf(stderr, "%s reading is not supported\n", input_format->desc);
+    goto cleanup;
+  }
+
+  /*
+   * Open input and output files
+   */
+  if (input_name[0] == '-' && input_name[1] == '\0')
+    input_fd = STDIN_FILENO;
+  else {
+    input_fd = open(input_name, O_RDONLY);
+    if (input_fd < 0) {
+      fprintf(stderr, "Failed to open input: %s\n", strerror(errno));
+      goto cleanup;
     }
+  }
+  if (output_name[0] == '-' && output_name[1] == '\0')
+    output_fd = STDOUT_FILENO;
+  else {
+    output_fd = open(output_name,
+            O_WRONLY | O_CREAT | O_TRUNC,
+            S_IRUSR | S_IWUSR |
+            S_IRGRP | S_IWGRP |
+            S_IROTH | S_IWOTH);
 
-    /*
-     * Lookup input format
-     */
-    input_format = hidrd_fmt_list_lkp(input_format_name);
-    if (input_format == NULL)
-    {
-        fprintf(stderr, "Input format \"%s\" not found\n",
-                input_format_name);
-        goto cleanup;
+    if (output_fd < 0) {
+      fprintf(stderr, "Failed to open output: %s\n", strerror(errno));
+      goto cleanup;
     }
+  }
 
-    /* Initialize input format */
-    hidrd_fmt_init(input_format);
+  /*
+   * Read the whole input file
+   */
+  if (!hidrd_fd_read_whole(input_fd, &input_buf, &input_size)) {
+    fprintf(stderr, "Failed to read input: %s\n", strerror(errno));
+    goto cleanup;
+  }
 
-    /* Check that input format supports reading */
-    if (!hidrd_fmt_readable(input_format))
-    {
-        fprintf(stderr, "%s reading is not supported\n",
-                input_format->desc);
-        goto cleanup;
+  /*
+   * Open input stream
+   */
+  input = hidrd_src_new_opts(input_format->src, &err,
+          input_buf, input_size, input_options);
+  if (input == NULL) {
+    fprintf(stderr, "Failed to open input stream:\n%s\n", err);
+    goto cleanup;
+  }
+  free(err);
+  err = NULL;
+
+  while ((item = hidrd_src_get(input)) != NULL)
+    if (!hidrd_fd_write_whole(output_fd,
+            item, hidrd_item_get_size(item))) {
+      fprintf(stderr, "Failed to write output file\n%s\n",
+              strerror(errno));
+      goto cleanup;
     }
+  if (hidrd_src_error(input)) {
+    fprintf(stderr, "Failed to read input stream\n%s\n",
+            (err = hidrd_src_errmsg(input)));
+    goto cleanup;
+  }
 
-    /*
-     * Open input and output files
-     */
-    if (input_name[0] == '-' && input_name[1] == '\0')
-        input_fd = STDIN_FILENO;
-    else
-    {
-        input_fd = open(input_name, O_RDONLY);
-        if (input_fd < 0)
-        {
-            fprintf(stderr, "Failed to open input: %s\n", strerror(errno));
-            goto cleanup;
-        }
-    }
-    if (output_name[0] == '-' && output_name[1] == '\0')
-        output_fd = STDOUT_FILENO;
-    else
-    {
-        output_fd = open(output_name,
-                         O_WRONLY | O_CREAT | O_TRUNC,
-                         S_IRUSR | S_IWUSR |
-                         S_IRGRP | S_IWGRP |
-                         S_IROTH | S_IWOTH);
-        if (output_fd < 0)
-        {
-            fprintf(stderr, "Failed to open output: %s\n", strerror(errno));
-            goto cleanup;
-        }
-    }
-
-    /*
-     * Read the whole input file
-     */
-    if (!hidrd_fd_read_whole(input_fd, &input_buf, &input_size))
-    {
-        fprintf(stderr, "Failed to read input: %s\n", strerror(errno));
-        goto cleanup;
-    }
-
-    /*
-     * Open input stream
-     */
-    input = hidrd_src_new_opts(input_format->src, &err,
-                               input_buf, input_size, input_options);
-    if (input == NULL)
-    {
-        fprintf(stderr, "Failed to open input stream:\n%s\n", err);
-        goto cleanup;
-    }
-    free(err);
-    err = NULL;
-
-    while ((item = hidrd_src_get(input)) != NULL)
-        if (!hidrd_fd_write_whole(output_fd,
-                                  item, hidrd_item_get_size(item)))
-        {
-            fprintf(stderr, "Failed to write output file\n%s\n",
-                    strerror(errno));
-            goto cleanup;
-        }
-    if (hidrd_src_error(input))
-    {
-        fprintf(stderr, "Failed to read input stream\n%s\n",
-                        (err = hidrd_src_errmsg(input)));
-        goto cleanup;
-    }
-
-    /* Success! */
-    result = 0;
+  /* Success! */
+  result = 0;
 
 cleanup:
 
-    free(err);
-    hidrd_src_delete(input);
-    free(input_buf);
-    if (input_fd >= 0 && input_fd != STDIN_FILENO)
-        close(input_fd);
-    if (output_fd >= 0 && output_fd != STDOUT_FILENO)
-        close(output_fd);
+  free(err);
+  hidrd_src_delete(input);
+  free(input_buf);
+  if (input_fd >= 0 && input_fd != STDIN_FILENO)
+    close(input_fd);
+  if (output_fd >= 0 && output_fd != STDOUT_FILENO)
+    close(output_fd);
 
-    /* Cleanup input format */
-    if (input_format != NULL)
-        hidrd_fmt_clnp(input_format);
+  /* Cleanup input format */
+  if (input_format != NULL)
+    hidrd_fmt_clnp(input_format);
 
-    return result;
+  return result;
 }

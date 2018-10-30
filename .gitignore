@@ -17,3 +17,13 @@ Makefile.in
 Makefile
 .[^.]*
 *.tar.gz
+/hidrd-android/gen/
+/hidrd-android-gradle/app/build/
+/hidrd-android/app/build/
+/hidrd-android/build/
+/hidrd-android/app/release/
+/auxdir/
+/build/
+ /.idea/
+ /.git/
+ .git/

@@ -24,6 +24,10 @@ hidrddir = $(includedir)/hidrd
 hidrd_HEADERS = \
     item.h
 
+if ENABLE_ADR
+SUBDIRS += adr
+endif
+
 if ENABLE_OPT
 WITH_OPT_DIRECTIVE = define
 SUBDIRS += opt
