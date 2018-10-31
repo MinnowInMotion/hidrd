@@ -3,7 +3,7 @@ project(hidrd-android)
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
-SET(HIDRD_REMOTE "YES" CACHE BOOL "Compile inline or from the remote repo clone")
+OPTION(HIDRD_REMOTE   "Compile inline or from the remote repo clone" ON)
 #SET_PROPERTY(CACHE HIDRD_REMOTE "YES"  BOOL "Enable Remote")
 
 MESSAGE(STATUS "HIDRD_REMOTE='${HIDRD_REMOTE}'")
