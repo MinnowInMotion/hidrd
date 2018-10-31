@@ -29,7 +29,7 @@ if ENABLE_ADR
 install-exec-am:
 
 	@echo "Create jniLibs + arch directory and copy libraries"
-	$(MKDIR_P) ${srcdir}/../../hidrd-android/app/src/main/jniLibs/${ARMEABI}
+	$(MKDIR_P) ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}
 	@echo "Copy Libraries to Android JniLibs Directory"
 #NB android only allow .so extensions in jniLibs upload...
 	-$(INSTALL) -m 0644 ${DESTDIR}/${bindir}/hidrd-convert ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}/libhidrd-convert.so
