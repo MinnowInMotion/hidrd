@@ -12,9 +12,9 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {             
-                arguments  "-DANDROID_TOOLCHAIN=clang -DHIDRD_REMOTE=OFF"
+                arguments  "-DANDROID_TOOLCHAIN=clang", "-DHIDRD_REMOTE=ON", "-DCMAKE_VERBOSE_MAKEFILE=TRUE"
                // cFlags "g -O0 -w -Wno-error  -DANDROID  -Dnative_lib_EXPORTS  -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -Wa,--noexecstack -Wformat -  Werror=format-security  -fno-limit-debug-info"
-                //cFlags "-DNDEBUG"            
+                //cFlags "-DNDEBUG"
                 cppFlags "-fexceptions", "-frtti"
 
             }
