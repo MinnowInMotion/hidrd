@@ -44,3 +44,22 @@ Makefile
 android/gradle-app/src/main/jniLibs/*
 
 android/ndk/*
+/android/build/
+android/deps/
+
+android/gradle-app/src/main/assets/hidrd\.xsd
+
+android/gradle-app/src/main/assets/mouse_descriptor\.code
+
+android/gradle-app/src/main/assets/mouse_descriptor\.hex
+
+android/gradle-app/src/main/assets/mouse_descriptor\.xml
+
+/dist/
+
+/build/
+*.in~
+
+nbproject/private/
+
+temp/

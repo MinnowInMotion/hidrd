@@ -236,6 +236,11 @@ AC_ARG_ENABLE(
     [], [enable_hidrd_convert="yes"])
 
 AC_ARG_ENABLE(
+    cmake-wrapper,
+    AS_HELP_STRING([--enable-cmake-wrapper], [enable cmake wrapper for android]),
+    [], [enable_cmake_wrapper="no"])
+
+AC_ARG_ENABLE(
     tokens,
     AS_HELP_STRING([--disable-tokens],
                    [disable tokens (required by XML format)]),
@@ -379,6 +384,7 @@ AM_CONDITIONAL([ENABLE_STRM], [test "$enable_streams" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT], [test "$enable_formats" = "yes"])
 AM_CONDITIONAL([ENABLE_ADR], [test "$enable_android" == "yes"])
 AM_CONDITIONAL([ENABLE_HIDRD_CONVERT], [test "$enable_hidrd_convert" = "yes"])
+AM_CONDITIONAL([ENABLE_CMAKE_WRAPPER], [test "$enable_cmake_wrapper" == "yes"])
 AM_CONDITIONAL([ENABLE_TOKENS], [test "$enable_tokens" = "yes"])
 AM_CONDITIONAL([ENABLE_NAMES], [test "$enable_names" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT_XML], [test "$enable_xml_format" = "yes"])
