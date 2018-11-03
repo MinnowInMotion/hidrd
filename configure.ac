@@ -134,32 +134,32 @@ AC_MSG_RESULT([target os: ${target_os}])
 
 LIBXML2_VERSION_MIN=2.6.11
 
-have_libxml2="1"
 
-AC_ARG_WITH([xml2-config], [  --with-xml2-config      libxml2 config program],
-if test "x${with_xml2_config}" = "xno" ; then
-  XML2_CONFIG=
-else
-  XML2_CONFIG="${with_xml2_config}"
+XML2_CONFIG=
+AS_IF([test "x$with_xml2_config" = "xcheck"],
+      [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
+      [test "x$with_xml2_config" != "xno"],
+      [XML2_CONFIG="$with_xml2_config"])
+
+AM_CONDITIONAL([WITH_LIBXML2], [test -n "$XML2_CONFIG"])
+
+LIBXML2_LIBS=
+LIBXML2_CFLAGS=
+if [test -n "$XML2_CONFIG"]; then
+    $XML2_CONFIG --version >/dev/null ||
+        AC_MSG_ERROR([cannot execute $XML2_CONFIG])
+
+    LIBXML2_LIBS="`$XML2_CONFIG --libs`"
+    LIBXML2_CFLAGS="`$XML2_CONFIG --cflags`"
 fi
-,
-  XML2_CONFIG=
-)
-if test "x${XML2_CONFIG}" != "x" ; then
-   if test ! -x "${XML2_CONFIG}" ; then
-     AC_MSG_ERROR([Unusable or missing xml2-config: ${XML2_CONFIG}])
-   fi
-else
-  AC_PATH_PROG([XML2_CONFIG], [xml2-config], , [${PATH}])
-  if test "x${XML2_CONFIG}" = "x" ; then
-    AC_MSG_ERROR([Cannot configure without xml2-config])
-  fi
-fi
+ 
+
+have_libxml2="1"
 
 # Make sure the version of libxml2 found is sufficient.
 
-
-
+AS_IF([test "x$with_xml2_config" = "xcheck"],
+    
 AC_MSG_CHECKING([for libxml >= ${LIBXML2_VERSION_MIN}])
 LIBXML2_FOUND=`2>&1 ${XML2_CONFIG} --version`
 LIBXML2_MAJOR=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $1}'`
@@ -192,10 +192,13 @@ if test "x${have_libxml2}" = "x1" ; then
   AC_CHECK_HEADER([libxml/xmlwriter.h], , [have_libxml2="0"])
 fi
 if test "x${have_libxml2}" = "x0" ; then
-  AC_MSG_ERROR([Cannot build without libxml2])
+  AC_MSG_ERROR([Cannot build without poopy libxml2])
 fi
+,
+      [test "x$with_xml2_config" != "xno"],
+  )
 
- 
+
 AC_SUBST(LIBXML2_LIBS)
 AC_SUBST(LIBXML2_CFLAGS)
  

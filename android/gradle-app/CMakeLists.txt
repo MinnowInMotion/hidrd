@@ -166,7 +166,7 @@ if (HIDRD_REMOTE)
             COMMAND ${MAKE_EXE} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
             COMMAND ${MAKE_EXE} DESTDIR=${LIBHIDRD_DIST_DIR} install
-            COMMAND ${MAKE} DESTDIR=${CMAKE_SYSROOT} install
+            COMMAND ${MAKE_EXE} DESTDIR=${CMAKE_SYSROOT} install
             STAMP_DIR ${STAMP_DIR}
             TMP_DIR ${TMP_DIR}
             DEPENDS autotools_XML2

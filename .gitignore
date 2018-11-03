@@ -62,4 +62,5 @@ android/gradle-app/src/main/assets/mouse_descriptor\.xml
 
 nbproject/private/
 
-temp/
+
+/cmake/build/

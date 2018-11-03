@@ -279,12 +279,10 @@ mkdir -p build
 mkdir -p build/${TARGET}
  
 cd build/${TARGET}
- 
-  
+   
  echo ${CFLAGS}
- #CONFIG_CMD="../../configure --build=${BUILD}  --with-sysroot=${SYSROOT} --host=${TARGET}   --prefix=${PREFIX}   ${FLAGS}"
 
-  CONFIG_CMD="../../configure --build=${BUILD}  --with-sysroot=${SYSROOT} --host=${HOST}   --prefix=${PREFIX} CXX=$CXX CC=$CC CFLAGS='${CFLAGS}' LDDFLAGS='${LDDFLAGS}'  ${FLAGS}"
+  CONFIG_CMD="../../configure --build=${BUILD}  --with-sysroot=${SYSROOT} --host=${HOST}   --prefix=${PREFIX} CXX=$CXX CC=$CC CFLAGS='${CFLAGS}' LDDFLAGS='${LDDFLAGS}'  ${FLAGS} --enable-xml-format"
   echo "/////////////////////////////////////////////////////"
  echo "running config ${CONFIG_CMD}"
  #exit 1
