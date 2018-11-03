@@ -62,5 +62,10 @@ android/gradle-app/src/main/assets/mouse_descriptor\.xml
 
 nbproject/private/
 
+/cmake-build*/
 
 /cmake/build/
+
+src/main/jniLibs/x86/liblzma\.so
+
+src/main/jniLibs/x86/libxml2\.so

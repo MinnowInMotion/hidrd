@@ -117,11 +117,11 @@ case "$target_os" in
     *android* | *ANDROID*)
         CFLAGS="-fPIE -fPIC -Wall -Wextra -DHAVE_CONFIG_H $CFLAGS"
         LDFLAGS="$LDFLAGS -pie -llog"
-       AC_MSG_RESULT([configure: Flags for ANDROID])
+       AC_MSG_RESULT([configure: Flags for android])
     ;;
         *)
         CFLAGS="-Wall -Wextra -Werror -DHAVE_CONFIG_H $CFLAGS"
-       AC_MSG_RESULT([configure: Flags for GENERIC LINUX])
+       AC_MSG_RESULT([configure: Flags for linux])
     ;;
 esac
 
@@ -134,12 +134,18 @@ AC_MSG_RESULT([target os: ${target_os}])
 
 LIBXML2_VERSION_MIN=2.6.11
 
-
+AS_IF([test "x$xml2_config_location" = "x"],[
 XML2_CONFIG=
 AS_IF([test "x$with_xml2_config" = "xcheck"],
       [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
       [test "x$with_xml2_config" != "xno"],
-      [XML2_CONFIG="$with_xml2_config"])
+      [XML2_CONFIG="$with_xml2_config"])],
+[XML2_CONFIG=
+AS_IF([test "x$with_xml2_config" = "xcheck"],
+      [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
+      [test "x$with_xml2_config" != "xno"],
+      [XML2_CONFIG="$with_xml2_config"])])
+
 
 AM_CONDITIONAL([WITH_LIBXML2], [test -n "$XML2_CONFIG"])
 
@@ -292,12 +298,20 @@ esac
 
 
 if test "$enable_android" == "yes"; then
-  AC_MSG_NOTICE([ANDROID is enabled])
+  AC_MSG_NOTICE([compiling for an android build])
   AC_DEFINE(HAVE_ANDROID,1,[Define android])
 fi
 
+AC_ARG_VAR(xml2_config_location,
+    AS_HELP_STRING(
+        [--set-xml2-config-location],
+        [override the default xml2-config directory]))
+
+
 #Check ARMEABI
-AC_ARG_VAR(ARMEABI, set the armeabi jniLibs sub folder)
+AC_ARG_VAR(ARMEABI, 
+    AS_HELP_STRING([--set-android-armeabi]
+        ,[set the armeabi (x86,x86_64,armeabi-7a,arm64) in order to populate the jniLibs sub folder]))
  #AC_ARG_ENABLE([armeabi],
  #[  --enable-armeabi    Turn on armeabi],
 # [case "${enableval}" in
