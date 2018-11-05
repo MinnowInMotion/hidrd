@@ -66,6 +66,5 @@ nbproject/private/
 
 /cmake/build/
 
-src/main/jniLibs/x86/liblzma\.so
+/src/main/jniLibs/*
 
-src/main/jniLibs/x86/libxml2\.so

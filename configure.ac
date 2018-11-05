@@ -125,6 +125,12 @@ case "$target_os" in
     ;;
 esac
 
+xml2_config_bin=""
+
+if test "${with_sysroot+set}" = set; then
+    AC_MSG_RESULT([configure: sysroot exists at ${with_sysroot}])
+  xml2_config_bin="${with_sysroot}/usr/bin/"
+ fi
 
 AC_MSG_RESULT([target os: ${target_os}])
 
@@ -132,20 +138,11 @@ AC_MSG_RESULT([target os: ${target_os}])
 # Checks for libraries.
 #
 
-LIBXML2_VERSION_MIN=2.6.11
-
-AS_IF([test "x$xml2_config_location" = "x"],[
 XML2_CONFIG=
 AS_IF([test "x$with_xml2_config" = "xcheck"],
       [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
       [test "x$with_xml2_config" != "xno"],
-      [XML2_CONFIG="$with_xml2_config"])],
-[XML2_CONFIG=
-AS_IF([test "x$with_xml2_config" = "xcheck"],
-      [AC_PATH_PROG(XML2_CONFIG, xml2-config)],
-      [test "x$with_xml2_config" != "xno"],
-      [XML2_CONFIG="$with_xml2_config"])])
-
+      [XML2_CONFIG="$with_xml2_config"])
 
 AM_CONDITIONAL([WITH_LIBXML2], [test -n "$XML2_CONFIG"])
 
@@ -158,51 +155,8 @@ if [test -n "$XML2_CONFIG"]; then
     LIBXML2_LIBS="`$XML2_CONFIG --libs`"
     LIBXML2_CFLAGS="`$XML2_CONFIG --cflags`"
 fi
- 
-
-have_libxml2="1"
-
-# Make sure the version of libxml2 found is sufficient.
-
-AS_IF([test "x$with_xml2_config" = "xcheck"],
-    
-AC_MSG_CHECKING([for libxml >= ${LIBXML2_VERSION_MIN}])
-LIBXML2_FOUND=`2>&1 ${XML2_CONFIG} --version`
-LIBXML2_MAJOR=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $1}'`
-LIBXML2_MINOR=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $2}' | tr a-z " " |awk '{print $1}'`
-LIBXML2_BRANCH=`echo ${LIBXML2_FOUND} | tr . " " | awk '{print $3}' | tr a-z " " |awk '{print $1}'`
-if test "x${LIBXML2_BRANCH}" = "x" ; then
-  LIBXML2_BRANCH=0
-fi
-LIBXML2_MAJOR_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $1}'`
-LIBXML2_MINOR_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $2}'`
-LIBXML2_BRANCH_MIN=`echo ${LIBXML2_VERSION_MIN} | tr . " " | awk '{print $3}'`
-if test ${LIBXML2_MAJOR} -gt ${LIBXML2_MAJOR_MIN} \
-     -o ${LIBXML2_MAJOR} -eq ${LIBXML2_MAJOR_MIN} \
-     -a ${LIBXML2_MINOR} -gt ${LIBXML2_MINOR_MIN} \
-     -o ${LIBXML2_MAJOR} -eq ${LIBXML2_MAJOR_MIN} \
-     -a ${LIBXML2_MINOR} -eq ${LIBXML2_MINOR_MIN} \
-     -a ${LIBXML2_BRANCH} -ge $LIBXML2_BRANCH_MIN ; then
-  AC_MSG_RESULT([${LIBXML2_MAJOR}.${LIBXML2_MINOR}.${LIBXML2_BRANCH}])
-  have_libxml2="1"
-  CPPFLAGS="${CPPFLAGS} `${XML2_CONFIG} --cflags`"
-  LIBXML2_LIBS="`${XML2_CONFIG} --libs`"
-  LIBS="${LIBS} `${XML2_CONFIG} --libs`"
-  LIBXML2_CFLAGS="`${XML2_CONFIG} --cflags`"
-else
-  AC_MSG_RESULT([no])
-  have_libxml2="0"
-fi
-if test "x${have_libxml2}" = "x1" ; then
-  dnl Final sanity check, to make sure that xmlwriter is present.
-  AC_CHECK_HEADER([libxml/xmlwriter.h], , [have_libxml2="0"])
-fi
-if test "x${have_libxml2}" = "x0" ; then
-  AC_MSG_ERROR([Cannot build without poopy libxml2])
-fi
-,
-      [test "x$with_xml2_config" != "xno"],
-  )
+AC_SUBST(LIBXML2_LIBS)
+AC_SUBST(LIBXML2_CFLAGS)
 
 
 AC_SUBST(LIBXML2_LIBS)
@@ -302,33 +256,20 @@ if test "$enable_android" == "yes"; then
   AC_DEFINE(HAVE_ANDROID,1,[Define android])
 fi
 
-AC_ARG_VAR(xml2_config_location,
-    AS_HELP_STRING(
-        [--set-xml2-config-location],
-        [override the default xml2-config directory]))
+AC_ARG_WITH(xml2-config,
+            AC_HELP_STRING([--with-xml2-config=PATH],
+                           [Specify xml2-config location @<:@default=$PATH@:>@]),
+            [],
+            [with_xml2_config=check])
 
-
-#Check ARMEABI
 AC_ARG_VAR(ARMEABI, 
-    AS_HELP_STRING([--set-android-armeabi]
-        ,[set the armeabi (x86,x86_64,armeabi-7a,arm64) in order to populate the jniLibs sub folder]))
- #AC_ARG_ENABLE([armeabi],
- #[  --enable-armeabi    Turn on armeabi],
-# [case "${enableval}" in
-#   yes) armeabi=true ;;
-#   no)  armeabi=false ;;
-#   *) AC_MSG_ERROR([bad value ${enableval} for --enable-armeabi]) ;;
-# esac]
-#,[armeabi=false])
-# AM_CONDITIONAL([ARMEABI], [test x$armeabi = xtrue])
+    [set the armeabi (x86,x86_64,armeabi-7a,arm64) to populate the jniLibs subfolder])
+
 
 #check for asprintf and vasprintf - Android - Historically bionic exposed these. 
 AC_CHECK_FUNC([asprintf],AC_DEFINE([HAVE_ASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,) 
 AC_CHECK_FUNC([vasprintf],AC_DEFINE([HAVE_VASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,)
-
-AC_CHECK_FUNC([bcopy],AC_DEFINE([HAVE_BCOPY], [], [mingw32 has no posix bcopy use memcopy instead.
- Android libc++ has moved this to a macro in NDK r11]) ,)
-
+AC_CHECK_FUNC([bcopy],AC_DEFINE([HAVE_BCOPY], [], [mingw32 has no posix bcopy use memcopy instead. Android libc++ has moved this to a macro in NDK r11]) ,)
 
 # Check for stream library dependencies
 if test "$enable_streams" = "yes"; then

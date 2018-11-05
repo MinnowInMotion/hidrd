@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4.1)
 project(gradle-app)
 
-option(HIDRD_REMOTE "Compile inline or from the remote repo clone" ON)
+option(HIDRD_REMOTE "Compile inline or from the remote repo clone" OFF)
 
 set(GITXZ https://git.tukaani.org/xz.git)
 set(GITXML2 https://github.com/GNOME/libxml2.git)
