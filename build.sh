@@ -282,7 +282,7 @@ cd build/${TARGET}
    
  echo ${CFLAGS}
 
-  CONFIG_CMD="../../configure --build=${BUILD}  --with-sysroot=${SYSROOT} --host=${HOST}   --prefix=${PREFIX} CXX=$CXX CC=$CC CFLAGS='${CFLAGS}' LDDFLAGS='${LDDFLAGS}'  ${FLAGS}  --with-xml2-config=/home/anthony/Android/Sdk/ndk-bundle/i686-none-linux-android21/sysroot/usr/bin/xml2-config"
+  CONFIG_CMD="../../configure --build=${BUILD}  --with-sysroot=${SYSROOT} --host=${HOST}   --prefix=${PREFIX} CXX=$CXX CC=$CC CFLAGS='${CFLAGS}' LDDFLAGS='${LDDFLAGS}'  ${FLAGS}  --with-xml2-config=/home/anthony/Documents/Source/Android/ndk/hidrd/cmake-build-release/.deps/libxml2/dist/x86/usr/bin/xml2-config"
   echo "/////////////////////////////////////////////////////"
  echo "running config ${CONFIG_CMD}"
  #exit 1

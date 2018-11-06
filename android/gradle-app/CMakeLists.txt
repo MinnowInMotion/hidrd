@@ -161,7 +161,7 @@ if (HIDRD_REMOTE)
             CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
             COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
             COMMAND autoreconf -if -Wall ${LIBHIDRD_DIR}
-            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper
+            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper --with-xml-config=${CMAKE_SYSROOT}/usr/bin/xml2-configtt
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
             COMMAND ${MAKE_EXE} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}

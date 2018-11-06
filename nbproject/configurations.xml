@@ -121,8 +121,9 @@
                    displayName="Important Files"
                    projectFiles="false"
                    kind="IMPORTANT_FILES_FOLDER">
-      <itemPath>Makefile</itemPath>
-      <itemPath>configure</itemPath>
+      <itemPath>CMakeLists.txt</itemPath>
+      <itemPath>Makefile.am</itemPath>
+      <itemPath>configure.ac</itemPath>
       <itemPath>nbproject/private/launcher.properties</itemPath>
     </logicalFolder>
   </logicalFolder>

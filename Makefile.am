@@ -39,11 +39,11 @@ install-exec-am:
 
 install-data-am:
 	@echo "Copy data to android resources directory"
-	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.code ${srcdir}/android/gradle-app/src/main/assets
-	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.hex ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.code ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.hex ${srcdir}/android/gradle-app/src/main/assets
 if WITH_LIBXML2
 	-$(INSTALL) -m 0644 ${DESTDIR}/${datadir}/xml/schema/hidrd.xsd ${srcdir}/android/gradle-app/src/main/assets
-	-$(INSTALL) -m 0644  ${srcdir}/res/mouse_descriptor.xml ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.xml ${srcdir}/android/gradle-app/src/main/assets
 
 endif
 
