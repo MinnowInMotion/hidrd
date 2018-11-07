@@ -262,8 +262,15 @@ AC_ARG_WITH(xml2-config,
             [],
             [with_xml2_config=check])
 
-AC_ARG_VAR(ARMEABI, 
-    [set the armeabi (x86,x86_64,armeabi-7a,arm64) to populate the jniLibs subfolder])
+AC_ARG_WITH(armeabi,
+            AC_HELP_STRING([--with-armeabi=ARMEABI],
+                           [Specify the armeabi (x86,x86_64,armeabi-7a,arm64) @<:@default=$ARMEABI@:>@]),
+            [],
+            [with_armeabi=check])
+
+
+#AC_ARG_VAR(ARMEABI, 
+  #  [set the armeabi (x86,x86_64,armeabi-7a,arm64) to populate the jniLibs subfolder])
 
 
 #check for asprintf and vasprintf - Android - Historically bionic exposed these. 
