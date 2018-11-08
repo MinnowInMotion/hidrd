@@ -263,17 +263,12 @@ AC_ARG_WITH(xml2-config,
             [with_xml2_config=check])
 
 AC_ARG_WITH(armeabi,
-            AC_HELP_STRING([--with-armeabi=ARMEABI],
-                           [Specify the armeabi (x86,x86_64,armeabi-7a,arm64) @<:@default=$ARMEABI@:>@]),
+            AC_HELP_STRING([--with-armeabi=[ARMEABI]],
+                           [Specify the armeabi (x86,x86_64,armeabi-7a,arm64-v8a) @<:@default=$ARMEABI@:>@]),
             [],
             [with_armeabi=check])
 
-
-#AC_ARG_VAR(ARMEABI, 
-  #  [set the armeabi (x86,x86_64,armeabi-7a,arm64) to populate the jniLibs subfolder])
-
-
-#check for asprintf and vasprintf - Android - Historically bionic exposed these. 
+#check for asprintf and vasprintf - Android - Historically bionic exposes these. 
 AC_CHECK_FUNC([asprintf],AC_DEFINE([HAVE_ASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,) 
 AC_CHECK_FUNC([vasprintf],AC_DEFINE([HAVE_VASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,)
 AC_CHECK_FUNC([bcopy],AC_DEFINE([HAVE_BCOPY], [], [mingw32 has no posix bcopy use memcopy instead. Android libc++ has moved this to a macro in NDK r11]) ,)

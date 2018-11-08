@@ -11,7 +11,6 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(ExternalProject)
 
-find_package(Git)
 
 set(GITXZ https://git.tukaani.org/xz.git)
 set(GITXML2 https://github.com/GNOME/libxml2.git)
@@ -22,6 +21,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
+
 set(STAMP_DIR .deps/logs)
 set(TMP_DIR .deps/tmp)
 
@@ -29,6 +29,8 @@ file(MAKE_DIRECTORY ${TMP_DIR})
 file(MAKE_DIRECTORY ${STAMP_DIR})
 
 if (ANDROID_BUILD)
+
+    unset(CMAKE_C_COMPILER)
     set(ANDROID_ABI x86 CACHE STRING "ABI Format")
     set_property(CACHE ANDROID_ABI PROPERTY STRINGS armeabi-v7a win64 x86_64 x86 armeabi-v7a)
     set(ANDROID_NATIVE_API_LEVEL 21 CACHE STRING "Android API level")
@@ -36,6 +38,8 @@ if (ANDROID_BUILD)
     set(ANDROID_NDK /home/anthony/Android/Sdk/ndk-bundle CACHE PATH "Android NDK Location")
 
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rc/main/jniLibs/${ANDROID_ABI})
+
+
 endif ()
 
 option(ANDROID_BUILD "Build for android" ON)
@@ -82,7 +86,7 @@ endif ()
 if (HIDRD_REMOTE)
     set(HIDRDURL ${GITHIDRD})
 else ()
-    set(HIDRDURL "")
+    #  set(HIDRDURL "")
 endif ()
 
 message(STATUS "Current HIDRD_XML_FORMAT_FLAG " ${HIDRD_XML_FORMAT_FLAG})
@@ -130,6 +134,7 @@ message(STATUS "Current HIDRD_XML_FORMAT_FLAG " ${HIDRD_XML_FORMAT_FLAG})
 # --disable-code-format   disable building source code format support  #                         (requires specification example format)
 
 if (ANDROID_BUILD)
+
     # Toolchain.
     if (CMAKE_HOST_SYSTEM_NAME STREQUAL Linux)
         set(ANDROID_HOST_TAG linux-x86_64)
@@ -142,7 +147,7 @@ if (ANDROID_BUILD)
     if (ANDROID_ABI STREQUAL armeabi-v7a)
         set(COMPILER_ROOT ${ANDROID_NDK}/armv7a-none-linux-android${ANDROID_NATIVE_API_LEVEL})
         set(ANDROID_TRIPLE armv7-linux-androideabi)
-        set(ANDROID_SYSROOT_ABI arm)
+        set(COMPILER_ROOT arm)
         set(CMAKE_SYSTEM_PROCESSOR armv7-a)
     elseif (ANDROID_ABI STREQUAL arm64-v8a)
         set(COMPILER_ROOT ${ANDROID_NDK}/i686-none-linux-android${ANDROID_NATIVE_API_LEVEL})
@@ -168,32 +173,37 @@ if (ANDROID_BUILD)
     set(CMAKE_SYSROOT ${COMPILER_ROOT}/sysroot)
     set(CMAKE_C_FLAGS "-g -O0  -Wno-null-pointer-arithmetic -w -Wno-error -Wno-unused-command-line-argument --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG}  ${LOG_LIB}")
 
+
+    if (NOT EXISTS COMPILER_ROOT)
+        message(STATUS "Installing standalone toochain for ${ANDROID_SYSROOT_ABI} apilevel-${ANDROID_NATIVE_API_LEVEL} ...")
+        execute_process(COMMAND python ${ANDROID_NDK}/build/tools/make_standalone_toolchain.py --arch ${ANDROID_SYSROOT_ABI} --api ${ANDROID_NATIVE_API_LEVEL} --install-dir ${COMPILER_ROOT})
+
+    endif ()
+    #      if(HIDRD_SYSROOT_INSTALL)
+    #   set(CMAKE_INSTALL_PREFIX  ${CMAKE_SYSROOT})
+    #  endif
+    unset(CMAKE_C_COMPILER)
     set(CMAKE_C_COMPILER ${ANDROID_LLVM_TOOLCHAIN_PREFIX}${ANDROID_TRIPLE}-gcc)
-    message(STATUS "Installing standalone toochain for ${ANDROID_SYSROOT_ABI} apilevel-${ANDROID_NATIVE_API_LEVEL} ...")
-    execute_process(COMMAND python ${ANDROID_NDK}/build/tools/make_standalone_toolchain.py --arch ${ANDROID_SYSROOT_ABI} --api ${ANDROID_NATIVE_API_LEVEL} --install-dir ${COMPILER_ROOT})
 
-    set(CMAKE_C_FLAGS "-g -O0 -Wno-null-pointer-arithmetic -w -Wno-error -Wno-unused-command-line-argument --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG}  ${LOG_LIB}")
-    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" "--prefix=${CMAKE_INSTALL_PREFIX}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}")
-
+    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}")
 
     list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dist/${ANDROID_SYSROOT_ABI}${CMAKE_INSTALL_PREFIX}")
 
     find_library(LOG_LIB log)
 
-    message(STATUS "Current LOG_LIB ${LOG_LIB}")
 else ()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w -Wno-error -Werror=implicit-function-declaration")
-    set(HIDRD_CONFIGURE_COMMAND "CC=${CMAKE_C_COMPILER} " "CFLAGS=${CMAKE_C_FLAGS}" "--prefix=${CMAKE_INSTALL_PREFIX}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_XML_FORMAT_FLAG}")
+    set(HIDRD_CONFIGURE_COMMAND "CC=${CMAKE_C_COMPILER} " "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_XML_FORMAT_FLAG}")
 endif ()
 
 set(PYTHON_CFLAGS -I${COMPILER_ROOT}/include/python2.7)
 set(PYTHON_LDFLAGS -L${COMPILER_ROOT}/lib/python2.7)
 set(ENV{PATH} ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH})
+set(ENV{PKG_CONFIG_PATH} "/home/anthony/Documents/Source/Android/ndk/hidrd/cmake-build-release/.deps/libxz/dist/x86/usr/lib/pkgconfig")
 
 list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}")
-
-
-message(STATUS "Current CMAKE_MODULE_PATH " ${CMAKE_MODULE_PATH})
+set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT})
+message(STATUS "Current ANDROID_NDK " ${ANDROID_NDK})
 message(STATUS "Current SYSROOT " ${CMAKE_SYSROOT})
 message(STATUS "Current ANDROID_ABI " ${ANDROID_ABI})
 message(STATUS "Current ANDROID_NATIVE_API_LEVEL " ${ANDROID_NATIVE_API_LEVEL})
@@ -207,56 +217,71 @@ message(STATUS "Current CMAKE_INSTALL_LIBDIR " ${CMAKE_INSTALL_LIBDIR})
 message(STATUS "Current HIDRD_SYSROOT_INSTALL " ${HIDRD_SYSROOT_INSTALL})
 message(STATUS "Current CMAKE_CURRENT_BINARY_DIR " ${CMAKE_CURRENT_BINARY_DIR})
 message(STATUS "Current CMAKE_INSTALL_PREFIX " ${CMAKE_INSTALL_PREFIX})
-message(STATUS "CMAKE_SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P}")
-message(STATUS "CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH}")
-message(STATUS "CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}")
-message(STATUS "ENV{PATH} $ENV{PATH}")
+message(STATUS "Current CMAKE_SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P}")
+message(STATUS "Current CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH}")
+message(STATUS "Current CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}")
 
 
 if (HIDRD_XML_FORMAT)
     message(STATUS "Building with XML Support")
-    #NB We dont want to download the repos again if we respin cmake
-    #find_package(LIBXML2 PATHS ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxml2/dist/${ANDROID_ABI}${CMAKE_INSTALL_PREFIX})
-    # find_package(LIBXML2 QUIET COMPONENTS system filesystem)
+    set(LIBXML2_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxml2)
+    set(LIBXML2_DIST_DIR ${LIBXML2_DIR}/dist/${ANDROID_ABI})
+    set(LIBXML2_INSTALL_PREFIX ${LIBXML2_DIR}/dist/${ANDROID_ABI}${CMAKE_INSTALL_PREFIX})
+    set(LIBXML2_INCLUDE_DIRS ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/libxml2)
+    set(LIBXZ_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxz)
+    set(LIBXZ_DIST_DIR ${LIBXZ_DIR}/dist/${ANDROID_ABI})
+    set(LIBXZ_INCLUDE_DIR ${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/lzma)
+    list(APPEND CMAKE_FIND_ROOT_PATH "${LIBXML2_INSTALL_PREFIX}")
+    list(APPEND CMAKE_FIND_ROOT_PATH "${LIBXZ_DIST_DIR_PREFIX}")
+
+    if (EXISTS ${LIBXML2_INSTALL_PREFIX}/bin/xml2-config)
+        set(XML2_CONFIG_LOCATION ${LIBXML2_INSTALL_PREFIX}/bin/xml2-config)
+    else ()
+        set(XML2_CONFIG_LOCATION ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
+    endif ()
+
+    message(STATUS "Current XML2_CONFIG_LOCATION ${XML2_CONFIG_LOCATION}")
     find_package(LIBXML2)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBLZMA liblzma)
 
+    message(STATUS "Current PkgConfig ${PKG_CONFIG_EXECUTABLE}")
+
     if (LIBLZMA_FOUND)
-        message(STATUS "LIBLZMA_PREFIX  ${LIBLZMA_PREFIX}")
+        message(STATUS "Current LIBLZMA_PREFIX  ${LIBLZMA_PREFIX}")
     endif ()
 
     if (LIBXML2_FOUND)
-
-        message(STATUS "LIBXML2: ${LIBXML2_INCLUDE_DIRS} ${LIBXML2_LIBRARIES}")
+        message(STATUS "Current LIBXML2_LIBRARIES:  ${LIBXML2_LIBRARIES}")
+        message(STATUS "Current LIBXML2_INCLUDE_DIRS: ${LIBXML2_INCLUDE_DIRS}")
         add_custom_target(autotools_XZ COMMENT "LIBXZ cached target")
         add_custom_target(autotools_XML2 COMMENT "LIBXML2 cached target" DEPENDS autotools_XZ)
-        set(LIBXZ_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxz)
-        set(LIBXZ_DIST_DIR ${LIBXZ_DIR}/dist/${ANDROID_ABI})
-        set(LIBXZ_INCLUDE_DIR ${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/lzma)
+
 
     else ()
 
         message(STATUS "LIBXML2 not found")
+        #reset the vars
         set(LIBXML2_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxml2)
         set(LIBXML2_DIST_DIR ${LIBXML2_DIR}/dist/${ANDROID_ABI})
         set(LIBXML2_INSTALL_PREFIX ${LIBXML2_DIR}/dist/${ANDROID_ABI}${CMAKE_INSTALL_PREFIX})
         set(LIBXML2_INCLUDE_DIRS ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/libxml2)
-        #set(LIBXML2_LIBRARIES
 
         set(LIBXZ_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/libxz)
         set(LIBXZ_DIST_DIR ${LIBXZ_DIR}/dist/${ANDROID_ABI})
         set(LIBXZ_INSTALL_PREFIX ${LIBXZ_DIR}/dist/${ANDROID_ABI}${CMAKE_INSTALL_PREFIX})
         set(LIBXZ_INCLUDE_DIR ${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/lzma)
+        # I hate this I can never seem to get it right... Why does sysroot not play with prefix!!!! Silly sed in the mean time
+        set(LIBXZ_INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${LIBXZ_DIST_DIR} install && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}|g" ${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/liblzma.pc && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}|g" ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/lib.pkgconfig/liblzma.pc)
 
-        set(LIBXZ_INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${LIBXZ_DIST_DIR} install)
-
-        message(STATUS "Installing libxz from ${GITXZ} \nFrom  ${LIBXZ_DIR}/build/${ANDROID_ABI} \nInto ${LIBXZ_DIST_DIR} ")
-        message(STATUS "Installing libxml2 from ${GITXML2} \nFrom ${LIBXML2_DIR}/build/${ANDROID_ABI} \nInto ${LIBXML2_DIST_DIR}")
+        message(STATUS "Installing libxz from ${GITXZ} \n${LIBXZ_DIR}/build/${ANDROID_ABI} ==> ${LIBXZ_DIST_DIR} ")
+        message(STATUS "Installing libxml2 from ${GITXML2} \n${LIBXML2_DIR}/build/${ANDROID_ABI} ==> ${LIBXML2_DIST_DIR}")
 
         if (HIDRD_SYSROOT_INSTALL)
+            # I hate this I can never seem to get it right... Why does sysroot not play with prefix!!!! Silly sed in the mean time
             set(LIBXZ_INSTALL_COMMAND ${LIBXZ_INSTALL_COMMAND} && ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${CMAKE_SYSROOT} install)
         endif ()
+
 
         ExternalProject_Add(autotools_XZ
                 GIT_REPOSITORY ${GITXZ}
@@ -267,7 +292,7 @@ if (HIDRD_XML_FORMAT)
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXZ_DIR}/build/${ANDROID_ABI}
                 CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXZ_DIR}
                 COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-                COMMAND ${LIBXZ_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} ARMEABI=${ANDROID_ABI} --prefix=${CMAKE_INSTALL_PREFIX}
+                COMMAND ${LIBXZ_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}"
                 BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
                 COMMAND ${CMAKE_MAKE_PROGRAM} -j8
                 INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -275,11 +300,13 @@ if (HIDRD_XML_FORMAT)
                 STAMP_DIR ${STAMP_DIR}
                 TMP_DIR ${TMP_DIR}
                 )
-
-        set(LIBXML2_INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${LIBXML2_DIST_DIR} install && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}|g" ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/xml2-config && sed -i -e "s|Linux||g" ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
+        # I hate this I can never seem to get it right... Why does sysroot not play with prefix!!!! Silly sed in the mean time
+        set(LIBXML2_INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${LIBXML2_DIST_DIR} install && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${LIBXML2_DIST_DIR}${
+          CMAKE_INSTALL_PREFIX}|g" ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/xml2-config && sed -i -e "s|Linux||g" ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/xml2-config && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}|g" ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
 
         if (HIDRD_SYSROOT_INSTALL)
-            set(LIBXML2_INSTALL_COMMAND ${LIBXML2_INSTALL_COMMAND} && ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${CMAKE_SYSROOT} install && sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}|g" ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
+            # I hate this I can never seem to get it right... Why does sysroot not play with prefix!!!! Silly sed in the mean time
+            set(LIBXML2_INSTALL_COMMAND ${LIBXML2_INSTALL_COMMAND} && ${CMAKE_MAKE_PROGRAM} -j8 DESTDIR=${CMAKE_SYSROOT} install)
         endif ()
 
         ExternalProject_Add(autotools_XML2
@@ -289,10 +316,9 @@ if (HIDRD_XML_FORMAT)
                 BINARY_DIR ${LIBXML2_DIR}/build/${ANDROID_ABI}
                 UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXML2_DIST_DIR}
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXML2_DIR}/build/${ANDROID_ABI}
-                CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
-                COMMAND autoreconf -if -Wall ${LIBXML2_DIR}
+                CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXML2_DIR}
                 COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-                COMMAND ${LIBXML2_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} --with-python=${COMPILER_ROOT}/bin --prefix=${CMAKE_INSTALL_PREFIX} --with-lzma=${LIBXZ_DIST_DIR}
+                COMMAND ${LIBXML2_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}" --with-python=${COMPILER_ROOT}/bin --with-lzma=${LIBXZ_DIST_DIR}
                 BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
                 COMMAND ${CMAKE_MAKE_PROGRAM} -j8
                 INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -318,51 +344,60 @@ if (HIDRD_XML_FORMAT)
 endif ()
 
 
-message(STATUS "Current HIDRD_CONFIGURE_COMMAND " ${HIDRD_CONFIGURE_COMMAND})
+find_package(Git)
 #can either be built inline or from external git repo
 
 set(HIDRD_ARMEABI_FLAG "--with-armeabi=${ANDROID_ABI}")
 
-if (HIDRD_XML_FORMAT)
-    list(APPEND CMAKE_FIND_ROOT_PATH "${LIBXML2_INSTALL_PREFIX}")
-    list(APPEND CMAKE_FIND_ROOT_PATH "${LIBXZ_DIST_DIR_PREFIX}")
-    set(HIDRD_XML_CONFIG_LOCATION ${LIBXML2_INSTALL_PREFIX}/bin/xml2-config)
-    if (HIDRD_SYSROOT_INSTALL)
-        set(HIDRD_XML_CONFIG_LOCATION ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
-    endif ()
-    message(STATUS "HIDRD_XML_CONFIG_LOCATION ${HIDRD_XML_CONFIG_LOCATION}")
-endif (HIDRD_XML_FORMAT)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${LOG_LIB}")
 
 find_package(HIDRD)
 
 if (HIDRD_FOUND)
-    message(STATUS "HIDRD: ${HIDRD_INCLUDE_DIRS} ${HIDRD_LIBS}")
     add_custom_target(autotools_HIDRD COMMENT "HIDRD cached target")
-    set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
-
-else ()
-
-    if (HIDRD_REMOTE)
-        set(HIDRD_DIR .deps/hidrd)
+    if (EXISTS ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd})
+        set(HIDRD_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd)
+        set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
+        set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
     else ()
-        set(HIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+        set(HIDRD_DIR ${CMAKE_SYSROOT})
+        set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
+        set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
     endif ()
 
+
+    list(APPEND CMAKE_FIND_ROOT_PATH "${HIDRD_INSTALL_PREFIX}")
+
+    #string(RANDOM LENGTH 5   EXVAR )
+
+    set(distname hidrd-export${EXVAR})
+else ()
+    set(distname hidrd-build)
+
+    set(HIDRD_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd)
     set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
     set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
 
-    set(HIDRD_XML_CONFIG_LOCATION_FLAG "--with-xml2-config=${HIDRD_XML_CONFIG_LOCATION}")
+    list(APPEND CMAKE_FIND_ROOT_PATH "${HIDRD_INSTALL_PREFIX}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${LOG_LIB}")
+    set(XML2_CONFIG_LOCATION_FLAG "--with-xml2-config=${XML2_CONFIG_LOCATION}")
 
-    if (HIDRD_XML_FORMAT)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-        set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" --with-sysroot=${CMAKE_SYSROOT} "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} ${HIDRD_CMAKE_WRAPPER_FLAG} ${HIDRD_DEBUG_FLAG} ${HIDRD_SHARED_FLAG} ${HIDRD_STATIC_FLAG} ${HIDRD_XML_FORMAT_FLAG} ${HIDRD_XML_CONFIG_LOCATION_FLAG} ${HIDRD_ARMEABI_FLAG})
-    endif (HIDRD_XML_FORMAT)
-    if (HIDRD_SYSROOT_INSTALL)
+
+    set(HIDRD_CONFIGURE_COMMAND ${HIDRD_CONFIGURE_COMMAND} "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" ${HIDRD_CMAKE_WRAPPER_FLAG} ${HIDRD_XML_FORMAT_FLAG} ${XML2_CONFIG_LOCATION_FLAG} ${HIDRD_ARMEABI_FLAG})
+
+
+    if (NOT HIDRD_REMOTE)
+        message(STATUS "Current HIDRD_DIR ${HIDRD_DIR}")
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cmake DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/lib DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/m4 DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/db DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/configure.ac DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.am DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/distcheck-all DESTINATION ${HIDRD_DIR})
 
     endif ()
-
     ExternalProject_Add(autotools_HIDRD
             GIT_REPOSITORY ${HIDRDURL}
             SOURCE_DIR ${HIDRD_DIR}
@@ -371,7 +406,7 @@ else ()
             COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIST_DIR}
             PREFIX ${HIDRD_DIR}/build/${ANDROID_ABI}
             CONFIGURE_COMMAND autoreconf -if -Wall ${HIDRD_DIR}
-            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/configure ${HIDRD_CONFIGURE_COMMAND}
+            COMMAND ${HIDRD_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}"
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
             COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -382,16 +417,12 @@ else ()
             )
 
 
-    set(HIDRD_INCLUDE_DIRS ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include)
-
     if (NOT EXISTS ${HIDRD_INCLUDE_DIRS})
-        set(HIDRD_INCLUDE_DIRS ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include)
+        set(HIDRD_INCLUDE_DIRS ${HIDRD_INSTALL_PREFIX}/include)
     endif (NOT EXISTS ${HIDRD_INCLUDE_DIRS})
 
-
     file(GLOB files ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/*.so)
-    message(STATUS "searching  HIDRD_DIST_DIR/CMAKE_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/ ")
-
+    
     foreach (hfile ${files})
         get_filename_component(libname ${hfile} NAME_WE)
         message(STATUS "Adding Dependency so: ${libname} file: ${hidrd_file}")
@@ -400,8 +431,10 @@ else ()
         set(HIDRD_LIBS ${libname} ${HIDRD_LIBS})
     endforeach ()
 
-
 endif (HIDRD_FOUND)
+message(STATUS "Current XML2_CONFIG_LOCATION :")
+execute_process(COMMAND ${XML2_CONFIG_LOCATION} --libs RESULT_VARIABLE RVAR)
+execute_process(COMMAND ${XML2_CONFIG_LOCATION} --cflags RESULT_VARIABLE RVAR)
 
 find_package(LIBXML2 QUIET)
 
@@ -414,35 +447,33 @@ if (HIDRD_XML_ENABLE)
         set(LIBXML2_INCLUDE_DIRS ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/libxml2)
     endif (NOT EXISTS ${LIBXML2_INCLUDE_DIRS})
 
-    message(STATUS "current LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIRS}")
+    message(STATUS "Current LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIRS}")
 
 endif (HIDRD_XML_ENABLE)
 
-message(STATUS "current HIDRD_INSTALL_PREFIX ${HIDRD_INSTALL_PREFIX}")
-message(STATUS "current HIDRD_LIBS ${HIDRD_LIBS}")
-message(STATUS "current HIDRD_INCLUDE_DIRS ${HIDRD_INCLUDE_DIRS}")
+message(STATUS "Current HIDRD_INSTALL_PREFIX ${HIDRD_INSTALL_PREFIX}")
+message(STATUS "Current HIDRD_LIBS ${HIDRD_LIBS}")
+message(STATUS "Current HIDRD_INCLUDE_DIRS ${HIDRD_INCLUDE_DIRS}")
 
 set(SOURCES src/adr.c)
 
-add_library(hidrd SHARED ${SOURCES})
-add_dependencies(hidrd autotools_HIDRD)
-target_link_libraries(hidrd ${LOG_LIB} ${LIBXML2_LIBRARIES} ${HIDRD_LIBS})
-
-message(STATUS "LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIRS}")
+add_library(${distname} SHARED ${SOURCES})
+add_dependencies(${distname} autotools_HIDRD)
+target_link_libraries(${distname} ${LOG_LIB} ${LIBXML2_LIBRARIES} ${HIDRD_LIBS})
+message(STATUS "Current LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIRS}")
 
 if (HIDRD_XML_FORMAT)
-    target_include_directories(hidrd PRIVATE ${HIDRD_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS})
+    target_include_directories(${distname} PRIVATE ${HIDRD_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS})
     add_dependencies(autotools_HIDRD autotools_XML2)
 else ()
-    target_include_directories(hidrd-build PRIVATE ${HIDRD_INCLUDE_DIRS})
+    target_include_directories(${distname} PRIVATE ${HIDRD_INCLUDE_DIRS})
 endif (HIDRD_XML_FORMAT)
-
 
 #print_target_properties(hidrd-build)
 #INSTALL CMAKE MODULES AND LIBRARY
 set(CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/hidrd")
 set(INCLUDE_INSTALL_DIR "include")
-
+set(INSTALL_DIR "")
 ## LIBRARY VERSION
 set(hidrd_SOVERSION 0)
 set(hidrd_API_VERSION 2)
@@ -453,7 +484,7 @@ configure_package_config_file(
         cmake/hidrd-config.cmake.in
         ${CMAKE_BINARY_DIR}/hidrd-config.cmake
         INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR}
-        PATH_VARS INCLUDE_INSTALL_DIR
+        PATH_VARS INCLUDE_INSTALL_DIR INSTALL_DIR
 )
 
 write_basic_package_version_file(
@@ -474,6 +505,9 @@ install(
         DESTINATION "${CMAKECONFIG_INSTALL_DIR}"
         COMPONENT Devel
 )
+install(DIRECTORY ${HIDRD_INSTALL_PREFIX}/bin
+        DESTINATION ${CMAKE_INSTALL_PREFIX}
+        )
 
 install(DIRECTORY ${HIDRD_INSTALL_PREFIX}/lib
         DESTINATION ${CMAKE_INSTALL_PREFIX}
@@ -492,29 +526,44 @@ if (HIDRD_XML_FORMAT)
             )
 endif (HIDRD_XML_FORMAT)
 
-install(TARGETS hidrd
+install(TARGETS ${distname}
         EXPORT hidrd-targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_BINARY_DIR}
         )
 
+
+message(STATUS "HIDRD_INSTALL_PREFIX ${HIDRD_INSTALL_PREFIX}")
 if (HIDRD_CP_LOCAL_JNILIB)
 
+    # add_custom_command(
+    # TARGET  hidrd-build
+    #           COMMAND  ${CMAKE_MAKE_PROGRAM}  ${HIDRD_DIR}/build/${ANDROID_ABI} DESTDIR=${HIDRD_DIR}/dist/${ANDROID_ABI} install
+    # )
+
+    if (HIDRD_CONVERT)
+        add_custom_command(
+                TARGET ${distname} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/bin/hidrd-convert ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/jniLibs/${ANDROID_ABI}/libhidrd-convert.so
+        )
+    endif ()
+
     add_custom_command(
-            TARGET hidrd POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/jniLibs/${ANDROID_ABI}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/assets
-            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/*.so ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/jniLibs/${ANDROID_ABI}
-            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.code ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/assets
-            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.hex ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/assets
+            TARGET ${distname} POST_BUILD
+
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/jniLibs/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/assets
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/*.so ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/jniLibs/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.code ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/assets
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.hex ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/assets
     )
 
     if (HIDRD_XML_ENABLE)
         add_custom_command(
-                TARGET hidrd-build POST_BUILD
+                TARGET ${distname} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/xml/schema/hidrd.xsd ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
-                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.xml ${CMAKE_CURRENT_SOURCE_DIR}/android/gradle-app/src/main/assets
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.xml ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/assets
         )
     endif (HIDRD_XML_ENABLE)
 
@@ -529,7 +578,7 @@ STRING(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
 STRING(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
 
 function(print_properties)
-    message(STATUS "CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
+    message(STATUS "properties: CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
 endfunction(print_properties)
 
 function(print_target_properties tgt)

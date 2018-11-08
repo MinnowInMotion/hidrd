@@ -31,19 +31,19 @@ if !ENABLE_CMAKE_WRAPPER
 install-exec-am:
 
 	@echo "Create jniLibs + arch directory and copy libraries"
-	$(MKDIR_P) ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}
+	$(MKDIR_P) ${srcdir}/android/hidrdinline/src/main/jniLibs/${ARMEABI}
 	@echo "Copy Libraries to Android JniLibs Directory"
 #NB android only allow .so extensions in jniLibs upload...	
-	-$(INSTALL) -m 0644 ${DESTDIR}/${bindir}/hidrd-convert ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}/libhidrd-convert.so
-	-$(INSTALL) -m 0644 ${DESTDIR}/${libdir}/libhidrd*.so ${srcdir}/android/gradle-app/src/main/jniLibs/${ARMEABI}
+	-$(INSTALL) -m 0644 ${DESTDIR}/${bindir}/hidrd-convert ${srcdir}/android/hidrdinline/src/main/jniLibs/${ARMEABI}/libhidrd-convert.so
+	-$(INSTALL) -m 0644 ${DESTDIR}/${libdir}/libhidrd*.so ${srcdir}/android/hidrdinline/src/main/jniLibs/${ARMEABI}
 
 install-data-am:
 	@echo "Copy data to android resources directory"
-	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.code ${srcdir}/android/gradle-app/src/main/assets
-	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.hex ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.code ${srcdir}/android/hidrdinline/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.hex ${srcdir}/android/hidrdinline/src/main/assets
 if WITH_LIBXML2
-	-$(INSTALL) -m 0644 ${DESTDIR}/${datadir}/xml/schema/hidrd.xsd ${srcdir}/android/gradle-app/src/main/assets
-	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.xml ${srcdir}/android/gradle-app/src/main/assets
+	-$(INSTALL) -m 0644 ${DESTDIR}/${datadir}/xml/schema/hidrd.xsd ${srcdir}/android/hidrdinline/src/main/assets
+	-$(INSTALL) -m 0644  ${srcdir}/share/mouse_descriptor.xml ${srcdir}/android/hidrdinline/src/main/assets
 
 endif
 

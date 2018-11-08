@@ -25,13 +25,21 @@ Makefile
 
 /android/gen/
 
-/android/gradle-app/app/build/
+/android/hidrdtest/app/build/
 
-/android/gradle-app/build/
+/android/hidrdtest/build/
 
-/android/gradle-app/app/release/
+/android/hidrdtest/app/release/
 
-/android/gradle-app/app/debug/
+/android/hidrdtest/app/debug/
+
+/android/hidrdinline/app/build/
+
+/android/hidrdinline/build/
+
+/android/hidrdinline/app/release/
+
+/android/hidrdinline/app/debug/
 
 /auxdir/
 
@@ -44,21 +52,14 @@ Makefile
 android/gradle-app/src/main/jniLibs/*
 
 android/ndk/*
+
 /android/build/
+
 android/deps/
-
-android/gradle-app/src/main/assets/hidrd\.xsd
-
-android/gradle-app/src/main/assets/mouse_descriptor\.code
-
-android/gradle-app/src/main/assets/mouse_descriptor\.hex
-
-android/gradle-app/src/main/assets/mouse_descriptor\.xml
-
+ 
 /dist/
 
-/build/
-*.in~
+/build/*.in~
 
 nbproject/private/
 
@@ -68,3 +69,22 @@ nbproject/private/
 
 /src/main/jniLibs/*
 
+android/hidinline/src/main/assets/mouse_descriptor\.hex
+
+android/hidinline/src/main/assets/mouse_descriptor\.xml
+
+android/hidinline/src/main/assets/xml/schema/hidrd\.xsd
+
+android/hidinline/src/main/assets/mouse_descriptor\.code
+
+*.so
+
+android/hidrdtest/src/main/assets/mouse_descriptor\.hex
+
+android/hidrdtest/src/main/assets/mouse_descriptor\.xml
+
+android/hidrdtest/src/main/assets/xml/schema/hidrd\.xsd
+
+android/hidrdtest/src/main/assets/mouse_descriptor\.code
+
+config\.h\.in~
