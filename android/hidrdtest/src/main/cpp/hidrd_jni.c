@@ -267,7 +267,7 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
  * Method:    hidrd_Xml_Code_PairPass
  * Signature: (Ljava/lang/String;Ljava/lang/String;Landroid/util/Pair;)V
  */
-JNIEXPORT void JNICALL Java_com_claydonkey_hidrd_FilePicker_hidrd_1Xml_1Code_1PairPass
+JNIEXPORT void JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code_1PairPass
         (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFle, jobject obj2) {
     jclass obj_Pair = (*env)->GetObjectClass(env, obj2);
     jstring _string = (*env)->NewStringUTF(env, "Foo");
@@ -291,7 +291,7 @@ JNIEXPORT void JNICALL Java_com_claydonkey_hidrd_FilePicker_hidrd_1Xml_1Code_1Pa
  * Method:    hidrd_Xml_Code_Pair
  * Signature: (Ljava/lang/String;Ljava/lang/String;)Landroid/util/Pair;
  */
-JNIEXPORT jobject JNICALL Java_com_claydonkey_hidrd_FilePicker_hidrd_1Xml_1Code_1Pair
+JNIEXPORT jobject JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code_1Pair
         (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFile) {
 
     jstring _string = (*env)->NewStringUTF(env, "Foo");
@@ -318,7 +318,7 @@ JNIEXPORT jobject JNICALL Java_com_claydonkey_hidrd_FilePicker_hidrd_1Xml_1Code_
  * Method:    hidrd_Xml_Code
  * Signature: (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrd_FilePicker_hidrd_1Xml_1Code
+JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code
         (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFile) {
 
     const char *input_fmt_name = "xml";

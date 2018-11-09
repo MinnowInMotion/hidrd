@@ -24,7 +24,7 @@ dist_noinst_SCRIPTS = bootstrap distcheck-all
 
 ACLOCAL_AMFLAGS = -I m4/autoconf
 
-if ENABLE_ADR 
+if ENABLE_ANDROID 
 
 if !ENABLE_CMAKE_WRAPPER	
 

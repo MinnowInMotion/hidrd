@@ -268,6 +268,13 @@ AC_ARG_WITH(armeabi,
             [],
             [with_armeabi=check])
 
+AC_ARG_WITH(android-xml-schema-path,
+            AC_HELP_STRING([--with-android-xml-schema-path=[PATH]],
+                           [Specify the location of the xsd schema on the target system@<:@default=$PATH@:>@]),
+            [],
+            [with_android_xml_schema_path=check])
+
+ 
 #check for asprintf and vasprintf - Android - Historically bionic exposes these. 
 AC_CHECK_FUNC([asprintf],AC_DEFINE([HAVE_ASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,) 
 AC_CHECK_FUNC([vasprintf],AC_DEFINE([HAVE_VASPRINTF], [], [Caution mingw32 will have no overflow protection]) ,)
@@ -342,7 +349,7 @@ AM_CONDITIONAL([ENABLE_TESTS_INSTALL], [test "$enable_tests_install" = "yes"])
 AM_CONDITIONAL([ENABLE_OPT], [test "$enable_opt" = "yes"])
 AM_CONDITIONAL([ENABLE_STRM], [test "$enable_streams" = "yes"])
 AM_CONDITIONAL([ENABLE_FMT], [test "$enable_formats" = "yes"])
-AM_CONDITIONAL([ENABLE_ADR], [test "$enable_android" == "yes"])
+AM_CONDITIONAL([ENABLE_ANDROID], [test "$enable_android" == "yes"])
 AM_CONDITIONAL([ENABLE_HIDRD_CONVERT], [test "$enable_hidrd_convert" = "yes"])
 AM_CONDITIONAL([ENABLE_CMAKE_WRAPPER], [test "$enable_cmake_wrapper" == "yes"])
 AM_CONDITIONAL([ENABLE_TOKENS], [test "$enable_tokens" = "yes"])

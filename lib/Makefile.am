@@ -31,7 +31,7 @@ if ENABLE_FMT
 SUBDIRS += fmt
 endif
 
-if ENABLE_ADR
+if ENABLE_ANDROID
 SUBDIRS += adr
 endif
 

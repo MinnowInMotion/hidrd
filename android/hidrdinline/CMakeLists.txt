@@ -3,6 +3,15 @@ project(hidrdinline)
 
 option(HIDRD_REMOTE "Compile inline or from the remote repo clone" OFF)
 
+ # Search libraries only under *target* paths.
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(HIDRD_DEBUG_FLAG "--enable-debug")
+endif ()
+
 set(GITXZ https://git.tukaani.org/xz.git)
 set(GITXML2 https://github.com/GNOME/libxml2.git)
 set(GITHIDRD https://github.com/MinnowInMotion/hidrd.git)
@@ -11,8 +20,8 @@ set(LIBXZ_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/libxz)
 set(LIBXML2_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/libxml2)
 set(LIBXML2_DIST_DIR ${LIBXML2_DIR}/dist/${ANDROID_ABI})
 set(LIBXZ_DIST_DIR ${LIBXZ_DIR}/dist/${ANDROID_ABI})
-set(LIBHIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/hidrd)
-set(LIBHIDRD_DIST_DIR ${LIBHIDRD_DIR}/dist/${ANDROID_ABI})
+set(HIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/hidrd)
+set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
 set(LIBXZ_INCLUDE_DIR ${LIBXZ_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/lzma)
 set(STAMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/logs)
 set(TMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/tmp)
@@ -29,34 +38,50 @@ elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL Darwin)
 elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
     set(ANDROID_HOST_TAG windows-x86_64)
 endif ()
+  if (ANDROID_ABI STREQUAL armeabi-v7a)
+        set(COMPILER_ROOT ${ANDROID_NDK}/armv7a-none-linux-android${ANDROID_NATIVE_API_LEVEL})
+        set(ANDROID_TRIPLE armv7-linux-androideabi)
+        set(COMPILER_ROOT arm)
+        set(CMAKE_SYSTEM_PROCESSOR armv7-a)
+    elseif (ANDROID_ABI STREQUAL arm64-v8a)
+        set(COMPILER_ROOT ${ANDROID_NDK}/i686-none-linux-android${ANDROID_NATIVE_API_LEVEL})
+        set(ANDROID_TRIPLE aarch64-linux-android)
+        set(ANDROID_SYSROOT_ABI arm64)
+        set(CMAKE_INSTALL_LIBDIR lib64)
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+    elseif (ANDROID_ABI STREQUAL x86_64)
+        set(COMPILER_ROOT ${ANDROID_NDK}/x86_64-none-linux-android${ANDROID_NATIVE_API_LEVEL})
+        set(ANDROID_TRIPLE x86_64-linux-android)
+        set(ANDROID_SYSROOT_ABI x86_64)
+        set(CMAKE_SYSTEM_PROCESSOR x86_64)
+    elseif (ANDROID_ABI STREQUAL x86)
+        set(COMPILER_ROOT ${ANDROID_NDK}/i686-none-linux-android${ANDROID_NATIVE_API_LEVEL})
+        set(ANDROID_TRIPLE i686-linux-android)
+        set(ANDROID_SYSROOT_ABI x86)
+        set(CMAKE_INSTALL_LIBDIR lib)
+        set(CMAKE_SYSTEM_PROCESSOR i686)
+        set(CMAKE_SIZEOF_VOID_P 4)
+    endif (ANDROID_ABI STREQUAL armeabi-v7a)
 
-if (ANDROID_ABI STREQUAL armeabi-v7a)
-    set(COMPILER_ROOT ${ANDROID_NDK}/armv7a-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-    set(COMPILER-TRIP arm-linux-androideabi)
-    set(ARCH arm)
-elseif (ANDROID_ABI STREQUAL x86_64)
-    set(COMPILER_ROOT ${ANDROID_NDK}/x86_64-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-    set(COMPILER-TRIP x86_64-linux-android)
-    set(ARCH x86_64)
-elseif (ANDROID_ABI STREQUAL x86)
-    set(COMPILER_ROOT ${ANDROID_NDK}/i686-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-    set(COMPILER-TRIP i686-linux-android)
-    set(ARCH x86)
-endif (ANDROID_ABI STREQUAL armeabi-v7a)
-
-find_package(Git)
-find_package(LIBXML2 QUIET)
-find_library(LOG_LIB log)
+string(REGEX REPLACE "\-isystem((.|\/)+)android" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+message(STATUS "Previous CMAKE_C_FLAGS " ${CMAKE_C_FLAGS})
 
 set(ANDROID_LLVM_TOOLCHAIN_PREFIX "${COMPILER_ROOT}/bin/")
 set(CMAKE_SYSROOT ${COMPILER_ROOT}/sysroot)
-set(CMAKE_C_FLAGS "-g -O0 -Wno-null-pointer-arithmetic -w -Wno-error -Wno-unused-command-line-argument --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG} ${LOG_LIB}")
-set(CMAKE_C_COMPILER ${ANDROID_LLVM_TOOLCHAIN_PREFIX}${COMPILER-TRIP}-gcc)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG} ${LOG_LIB}")
+set(CMAKE_C_COMPILER ${ANDROID_LLVM_TOOLCHAIN_PREFIX}${ANDROID_TRIPLE}-gcc)
 set(PYTHON_CFLAGS -I${COMPILER_ROOT}/include/python2.7)
 set(PYTHON_LDFLAGS -L${COMPILER_ROOT}/lib/python2.7)
 
+message(STATUS "CMAKE_SYSROOT ${CMAKE_SYSROOT}")
+list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}")
+
+
+set(ENV{PATH} ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH})
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_SYSROOT}/usr/lib/pkgconfig")
+message(STATUS "Current CMAKE_FIND_ROOT_PATH " ${CMAKE_FIND_ROOT_PATH})
 message(STATUS "Current CMAKE_MODULE_PATH " ${CMAKE_MODULE_PATH})
-message(STATUS "Current SYSROOT " ${CMAKE_SYSROOT})
+message(STATUS "Current CMAKE_SYSROOT " ${CMAKE_SYSROOT})
 message(STATUS "Current ANDROID_ABI " ${ANDROID_ABI})
 message(STATUS "Current ANDROID_NATIVE_API_LEVEL " ${ANDROID_NATIVE_API_LEVEL})
 message(STATUS "Current CMAKE_C_COMPILER " ${CMAKE_C_COMPILER})
@@ -64,6 +89,15 @@ message(STATUS "Current CMAKE_C_FLAGS " ${CMAKE_C_FLAGS})
 message(STATUS "Current ENV PATH " $ENV{PATH})
 message(STATUS "Current TMP_DIR " ${TMP_DIR})
 message(STATUS "Current STAMP_DIR " ${STAMP_DIR})
+
+
+find_package(Git)
+find_library(LOG_LIB log)
+    #find_package(PkgConfig REQUIRED)
+   # pkg_check_modules(LIBLZMA REQUIRED liblzma)
+#message (STATUS "Current LIBLZMA_LIBRARY_DIRS  ${LIBLZMA_LIBDIR}")
+find_package(LIBXML2 QUIET )
+
 message(STATUS "Current GIT_EXECUTABLE " ${GIT_EXECUTABLE})
 message(STATUS "Current CMAKE_INSTALL_LIBDIR " ${CMAKE_INSTALL_LIBDIR})
 message(STATUS "Current LOG_LIB " ${LOG_LIB})
@@ -72,16 +106,16 @@ execute_process(COMMAND python ${ANDROID_NDK}/build/tools/make_standalone_toolch
 
 include(ExternalProject)
 
-if (${LIBXML2_FOUND})
+if (LIBXML2_FOUND)
 
-    message(STATUS "LIBXML2: ${LIBXML2_INCLUDE_DIR} ${LIBHIDRD_INCLUDE_DIR}")
+    message(STATUS "LIBXML2: ${LIBXML2_INCLUDE_DIR} ${HIDRD_INCLUDE_DIR}")
     add_custom_target(autotools_LZMA
             COMMENT "a phony target")
     add_custom_target(autotools_XML2
             COMMENT "a phony target"
             DEPENDS autotools_LZMA)
 
-else (${LIBXML2_FOUND})
+else (LIBXML2_FOUND)
     set(LIBXML2_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/libxml2)
     set(LIBXML2_DIST_DIR ${LIBXML2_DIR}/dist/${ANDROID_ABI})
     set(LIBXML2_INCLUDE_DIR ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include/libxml2)
@@ -93,15 +127,14 @@ else (${LIBXML2_FOUND})
             BINARY_DIR ${LIBXZ_DIR}/build/${ANDROID_ABI}
             UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXZ_DIST_DIR}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXZ_DIR}/build/${ANDROID_ABI}
-            CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
-            COMMAND autoreconf -if -Wall ${LIBXZ_DIR}
+            CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXZ_DIR}
             COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX}
+            COMMAND ../../configure "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX}
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} -j8
+            COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} DESTDIR=${LIBXZ_DIST_DIR} install
-            COMMAND ${MAKE_EXE} DESTDIR=${CMAKE_SYSROOT} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${LIBXZ_DIST_DIR} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${CMAKE_SYSROOT} install
             STAMP_DIR ${STAMP_DIR}
             TMP_DIR ${TMP_DIR}
             )
@@ -114,15 +147,14 @@ else (${LIBXML2_FOUND})
             PREFIX ${LIBXML2_DIR}/build/${ANDROID_ABI}
             UPDATE_COMMAND COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXML2_DIST_DIR}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXML2_DIR}/build/${ANDROID_ABI}
-            CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
-            COMMAND autoreconf -if -Wall ${LIBXML2_DIR}
+            CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXML2_DIR}
             COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} ${PYTHON_CFLAGS} ${PYTHON_LDFLAGS}" --with-python=${COMPILER_ROOT}/bin --prefix=${CMAKE_INSTALL_PREFIX}
+            COMMAND ../../configure "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} ${PYTHON_CFLAGS} ${PYTHON_LDFLAGS}" --with-python=${COMPILER_ROOT}/bin --prefix=${CMAKE_INSTALL_PREFIX}
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} -j8
+            COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} DESTDIR=${LIBXML2_DIST_DIR} install
-            COMMAND ${MAKE_EXE} DESTDIR=${CMAKE_SYSROOT} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${LIBXML2_DIST_DIR} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${CMAKE_SYSROOT} install
             COMMAND sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}|g" ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config
             COMMAND sed -i -e "s|${CMAKE_INSTALL_PREFIX}|${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}|g" ${LIBXML2_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/xml2-config
             STAMP_DIR ${STAMP_DIR}
@@ -142,54 +174,52 @@ else (${LIBXML2_FOUND})
             DEPENDS autotools_LZMA
     )
 
-
-endif (${LIBXML2_FOUND})
-
-
+endif (LIBXML2_FOUND)
 #can either be built inline or from external git repo
 if (HIDRD_REMOTE)
-    set(LIBHIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/hidrd)
-    set(LIBHIDRD_DIST_DIR ${LIBHIDRD_DIR}/dist/${ANDROID_ABI})
+    set(HIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps/hidrd)
+    set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
+
     message(STATUS "Installing hidrd from ${GITHIDRD}")
+
     externalproject_add(autotools_HIDRD
             GIT_REPOSITORY ${GITHIDRD}
-            SOURCE_DIR ${LIBHIDRD_DIR}
-            BINARY_DIR ${LIBHIDRD_DIR}/build/${ANDROID_ABI}
-            UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBHIDRD_DIR}/build/${ANDROID_ABI}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBHIDRD_DIST_DIR}
-            PREFIX ${LIBHIDRD_DIR}/build/${ANDROID_ABI}
+            SOURCE_DIR ${HIDRD_DIR}
+            BINARY_DIR ${HIDRD_DIR}/build/${ANDROID_ABI}
+            UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIR}/build/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIST_DIR}
+            PREFIX ${HIDRD_DIR}/build/${ANDROID_ABI}
             CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
             COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND autoreconf -if -Wall ${LIBHIDRD_DIR}
-            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper --with-xml-config=${CMAKE_SYSROOT}/usr/bin/xml2-configtt
+            COMMAND autoreconf -if -Wall ${HIDRD_DIR}
+            COMMAND ../../configure "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --enable-debug  --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper --with-xml-config=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} -j8
+            COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} DESTDIR=${LIBHIDRD_DIST_DIR} install
-            COMMAND ${MAKE_EXE} DESTDIR=${CMAKE_SYSROOT} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${HIDRD_DIST_DIR} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${CMAKE_SYSROOT} install
             STAMP_DIR ${STAMP_DIR}
             TMP_DIR ${TMP_DIR}
             DEPENDS autotools_XML2
             )
-    find_package(LIBXML2)
+    find_package(LIBXML2 QUIET)
 else (HIDRD_REMOTE)
-    set(LIBHIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../)
-    set(LIBHIDRD_DIST_DIR ${LIBHIDRD_DIR}/dist/${ANDROID_ABI})
+    set(HIDRD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../)
+    set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
     externalproject_add(autotools_HIDRD
-            SOURCE_DIR ${LIBHIDRD_DIR}
-            BINARY_DIR ${LIBHIDRD_DIR}/build/${ANDROID_ABI}
-            UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBHIDRD_DIST_DIR}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBHIDRD_DIR}/dist/${ANDROID_ABI}
-            PREFIX ${LIBHIDRD_DIR}/build/${ANDROID_ABI}
-            CONFIGURE_COMMAND export ARMEABI=${ANDROID_ABI}
-            COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND autoreconf -if -Wall ${LIBHIDRD_DIR}
-            COMMAND ../../configure "--host=${COMPILER-TRIP}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper
+            SOURCE_DIR ${HIDRD_DIR}
+            BINARY_DIR ${HIDRD_DIR}/build/${ANDROID_ABI}
+            UPDATE_COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIST_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIR}/dist/${ANDROID_ABI}
+            PREFIX ${HIDRD_DIR}/build/${ANDROID_ABI}
+            CONFIGURE_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
+            COMMAND autoreconf -if -Wall ${HIDRD_DIR}
+            COMMAND ../../configure "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" ${HIDRD_DEBUG_FLAG} "--with-xml2-config=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config" "--with-armeabi=${ANDROID_ABI}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" --prefix=${CMAKE_INSTALL_PREFIX} --enable-cmake-wrapper
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} -j8
+            COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-            COMMAND ${MAKE_EXE} DESTDIR=${LIBHIDRD_DIST_DIR} install
-            COMMAND ${MAKE_EXE} DESTDIR=${CMAKE_SYSROOT} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${HIDRD_DIST_DIR} install
+            COMMAND ${CMAKE_MAKE_PROGRAM} DESTDIR=${CMAKE_SYSROOT} install
             STAMP_DIR ${STAMP_DIR}
             TMP_DIR ${TMP_DIR}
             DEPENDS autotools_XML2
@@ -198,9 +228,9 @@ else (HIDRD_REMOTE)
 endif (HIDRD_REMOTE)
 
 
-set(LIBHIDRD_INCLUDE_DIR ${LIBHIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include)
-if (NOT EXISTS ${LIBHIDRD_INCLUDE_DIR})
-    set(LIBHIDRD_INCLUDE_DIR ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include)
+set(HIDRD_INCLUDE_DIR ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/include)
+if (NOT EXISTS ${HIDRD_INCLUDE_DIR})
+    set(HIDRD_INCLUDE_DIR ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include)
 endif ()
 
 if (NOT LIBXML2_INCLUDE_DIR)
@@ -212,9 +242,9 @@ if (NOT EXISTS ${LIBXML2_INCLUDE_DIR})
 endif ()
 
 message(STATUS "LIBXML2 include: ${LIBXML2_INCLUDE_DIR}")
-message(STATUS "HIDRD include: ${LIBHIDRD_INCLUDE_DIR}")
+message(STATUS "HIDRD include: ${HIDRD_INCLUDE_DIR}")
 
-file(GLOB hidrd_libfiles ${LIBHIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/*.so)
+file(GLOB hidrd_libfiles ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/*.so)
 foreach (hidrd_file ${hidrd_libfiles})
     get_filename_component(libname ${hidrd_file} NAME_WE)
     message(STATUS "so: ${libname} file: ${hidrd_file} ")
@@ -231,15 +261,20 @@ add_dependencies(hidrd_jni autotools_HIDRD)
 add_dependencies(autotools_HIDRD autotools_XML2)
 
 target_link_libraries(hidrd_jni ${LOG_LIB} ${LIBXML2_LIBRARIES} ${hidrd_libs})
-target_include_directories(hidrd_jni PRIVATE ${LIBHIDRD_INCLUDE_DIR} ${LIBXML2_INCLUDE_DIR})
+
+message (STATUS " Current LOG_LIB ${LOG_LIB} " )
+message (STATUS " Current LIBXML2_LIBRARIES ${LIBXML2_LIBRARIES} " )
+message (STATUS " Current HIDRD_INCLUDE_DIR ${HIDRD_INCLUDE_DIR} " )
+target_include_directories(hidrd_jni PRIVATE ${HIDRD_INCLUDE_DIR} ${LIBXML2_INCLUDE_DIR})
 
 
 add_custom_command(
         TARGET hidrd_jni POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBHIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/*.so ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBHIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/share/xml/schema/hidrd.xsd ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBHIDRD_DIR}/res/mouse_descriptor.xml ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBHIDRD_DIR}/res/mouse_descriptor.code ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
-        COMMAND ${CMAKE_COMMAND} -E copy ${LIBHIDRD_DIR}/res/mouse_descriptor.hex ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/bin/hidrd-convert ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libhidrd-convert.so
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/lib/*.so ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX}/share/xml/schema/hidrd.xsd ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIR}share/mouse_descriptor.xml ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIR}share/mouse_descriptor.code ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
+        COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_DIR}share/mouse_descriptor.hex ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets
 )
 

@@ -7,7 +7,9 @@ cmake_minimum_required(VERSION 3.4.1)
 #
 project(hidrdtest)
 
-
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(HIDRD_DEBUG_FLAG "--enable-debug")
+endif ()
 
 # Search libraries only under *target* paths.
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
@@ -17,7 +19,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 if (ANDROID_BUILD)
 
-    unset(CMAKE_C_COMPILER)
     set(ANDROID_ABI x86 CACHE STRING "ABI Format")
     set_property(CACHE ANDROID_ABI PROPERTY STRINGS armeabi-v7a win64 x86_64 x86 armeabi-v7a)
     set(ANDROID_NATIVE_API_LEVEL 21 CACHE STRING "Android API level")
@@ -39,6 +40,10 @@ option(HIDRD_CONVERT "build hidconvert executable" ON)
 option(HIDRD_XML_FORMAT "build XML format support (requires tokens, names and libxml2)" ON)
 option(HIDRD_CMAKE_WRAPPER "enable cmake wrapper for android" ON)
 option(HIDRD_CP_LOCAL_JNILIB "copy shared libraries to local jnilib" ON)
+set(XML_SCHEMA_PATH CACHE STRING "path of the xsd schema")
+
+string(REGEX REPLACE "\-isystem((.|\/)+)android" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+message(STATUS "Previous CMAKE_C_FLAGS " ${CMAKE_C_FLAGS})
 
 if (HIDRD_DEBUG)
     set(HIDRD_DEBUG_FLAG "--enable-debug")
@@ -70,6 +75,10 @@ if (HIDRD_CMAKE_WRAPPER)
     set(HIDRD_CMAKE_WRAPPER_FLAG "--enable-cmake-wrapper")
 endif ()
 
+
+if (NOT XML_SCHEMA_PATH STREQUAL "")
+set(XML_SCHEMA_PATH_FLAG "-DXML_SCHEMA_PATH=${XML_SCHEMA_PATH}")
+endif()
 
 message(STATUS "Current HIDRD_XML_FORMAT_FLAG " ${HIDRD_XML_FORMAT_FLAG})
 
@@ -111,7 +120,7 @@ if (ANDROID_BUILD)
 
     set(ANDROID_LLVM_TOOLCHAIN_PREFIX "${COMPILER_ROOT}/bin/")
     set(CMAKE_SYSROOT ${COMPILER_ROOT}/sysroot)
-    set(CMAKE_C_FLAGS "-g -O0  -Wno-null-pointer-arithmetic -w -Wno-error -Wno-unused-command-line-argument --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG}  ${LOG_LIB}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${XML_SCHEMA_PATH_FLAG} --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${ANDROID_NDK}/toolchains/x86-4.9/prebuilt/${ANDROID_HOST_TAG}  ${LOG_LIB}")
 
 
     if (NOT EXISTS COMPILER_ROOT)
@@ -122,16 +131,13 @@ if (ANDROID_BUILD)
 
     unset(CMAKE_C_COMPILER)
     set(CMAKE_C_COMPILER ${ANDROID_LLVM_TOOLCHAIN_PREFIX}${ANDROID_TRIPLE}-gcc)
-
-    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}")
-
+    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_DEBUG_FLAG}")
     list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dist/${ANDROID_SYSROOT_ABI}${CMAKE_INSTALL_PREFIX}")
-
     find_library(LOG_LIB log)
 
 else ()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w -Wno-error -Werror=implicit-function-declaration")
-    set(HIDRD_CONFIGURE_COMMAND "CC=${CMAKE_C_COMPILER} " "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_XML_FORMAT_FLAG}")
+    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} ${XML_SCHEMA_PATH_FLAG} )
+    set(HIDRD_CONFIGURE_COMMAND "CC=${CMAKE_C_COMPILER} " "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_XML_FORMAT_FLAG}" "${HIDRD_DEBUG_FLAG}")
 endif ()
 
 set(PYTHON_CFLAGS -I${COMPILER_ROOT}/include/python2.7)

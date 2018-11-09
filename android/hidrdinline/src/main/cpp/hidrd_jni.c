@@ -40,8 +40,7 @@
 #include "hidrd_jni.h"
 
 
-#define  LOG_TAG    "com.claydonkey.hidrd"
-
+#define  LOG_TAG    "com.claydonkey.hidrdinline"
 
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
@@ -50,8 +49,6 @@
 			__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__); \
 			else  \
 			__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
-
-
 
 static int process(const char *input_name, const char *input_fmt_name, const char *input_options,
                    const char *output_name, const char *output_fmt_name,

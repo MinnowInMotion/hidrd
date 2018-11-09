@@ -24,8 +24,8 @@ hidrd_fmt_xml_HEADERS = \
     snk.h               \
     src.h
 
-if ENABLE_ADR
-XML_SCHEMA_PTH = /storage/emulated/0/Android/data/com.claydonkey.hidrd/files/hidrd.xsd
+if ENABLE_ANDROID
+XML_SCHEMA_PTH = $(ANDROID_XML_SCHEMA_PATH)
 else
 XML_SCHEMA_PTH = $(datadir)/xml/schema/hidrd.xsd
 endif

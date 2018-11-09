@@ -24,7 +24,7 @@ hidrddir = $(includedir)/hidrd
 hidrd_HEADERS = \
     item.h
 
-if ENABLE_ADR
+if ENABLE_ANDROID
 SUBDIRS += adr
 endif
 
