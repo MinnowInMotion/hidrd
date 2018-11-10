@@ -1,2 +1,1 @@
-include 'hidrdtest'
-
+include ':hidrdtest'

@@ -11,65 +11,28 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(ExternalProject)
 
-set(GITXZ https://git.tukaani.org/xz.git)
-set(GITXML2 https://github.com/GNOME/libxml2.git)
-set(GITHIDRD https://github.com/MinnowInMotion/hidrd.git)
+message(STATUS "OI ${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/standalone-bootstrap.cmake)
+find_package(Git)
 
-# Search libraries only under *target* paths.
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-
-set(STAMP_DIR .deps/logs)
-set(TMP_DIR .deps/tmp)
-
-file(MAKE_DIRECTORY ${TMP_DIR})
-file(MAKE_DIRECTORY ${STAMP_DIR})
-
-if (ANDROID_BUILD)
-
-    unset(CMAKE_C_COMPILER)
-    set(ANDROID_ABI x86 CACHE STRING "ABI Format")
-    set_property(CACHE ANDROID_ABI PROPERTY STRINGS armeabi-v7a win64 x86_64 x86 armeabi-v7a)
-    set(ANDROID_NATIVE_API_LEVEL 26 CACHE STRING "Android API level")
-    set_property(CACHE ANDROID_NATIVE_API_LEVEL PROPERTY STRINGS 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28)
-    set(ANDROID_NDK /home/anthony/Android/Sdk/ndk-bundle CACHE PATH "Android NDK Location")
-
-    if (ANDROID_APP_NAME)
-        set(ANDROID_JNILIBS_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_APP_NAME}/src/main/jniLibs CACHE STRING "Android JNILIBS location")
-        set(ANDROID_ASSETS_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_APP_NAME}/src/main/assets CACHE STRING "Android assets location")
-    endif ()
-
-    set(XML_SCHEMA_PATH /storage/emulated/0/Android/data/com.claydonkey.hidrd/files/hidrd.xsd CACHE STRING "path of the hidrd xsd schema residing on target")
-
-endif ()
+set(GITXZ https://git.tukaani.org/xz.git CACHE STRING "location of xz git repo")
+set(GITXML2 https://github.com/GNOME/libxml2.git CACHE STRING "location of libxml2 it repol")
+set(GITHIDRD https://github.com/MinnowInMotion/hidrd.git CACHE STRING "location of doctored hidrd on git repol")
 
 option(ANDROID_BUILD "Build for android" ON)
 option(HIDRD_REMOTE "Compile from the remote repo clone [Off=compile inline]" OFF)
 option(SYSROOT_INSTALL "Install libXML2 and libXZ into sysroot if not present" ON)
-option(HIDRD_SHARED "build shared libraries" ON)
-option(HIDRD_STATIC "build static libraries" ON)
+
 option(HIDRD_CONVERT "build hidconvert executable" ON)
 option(HIDRD_XML_FORMAT "build XML format support (requires tokens, names and libxml2)" ON)
 option(HIDRD_CMAKE_WRAPPER "enable cmake wrapper for android" ON)
 
-#set(CMAKE_BUILD_TYPE "Debug")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(HIDRD_DEBUG_FLAG "--enable-debug")
 endif ()
 
-if (HIDRD_SHARED)
-    set(HIDRD_SHARED_FLAG "--enable-shared")
-else ()
-    set(HIDRD_SHARED_FLAG "--disable-shared")
-endif ()
-
-if (HIDRD_STATIC)
-    set(HIDRD_STATIC_FLAG "--enable-static")
-else ()
-    set(HIDRD_STATIC_FLAG "--disable-static")
-endif ()
 
 if (HIDRD_CONVERT)
     set(HIDRD_CONVERT_FLAG "--enable-hidrd-convert")
@@ -87,17 +50,13 @@ endif ()
 
 if (HIDRD_REMOTE)
     set(HIDRDURL ${GITHIDRD})
-else ()
-
-    if (NOT XML_SCHEMA_PATH STREQUAL "")
-        set(XML_SCHEMA_PATH_FLAG "--with-android-xml-schema-path=${XML_SCHEMA_PATH}")
-    endif ()
-
-
-    #  set(HIDRDURL "")
 endif ()
 
-message(STATUS "Current HIDRD_XML_FORMAT_FLAG " ${HIDRD_XML_FORMAT_FLAG})
+if (NOT XML_SCHEMA_PATH STREQUAL "")
+    set(XML_SCHEMA_PATH_FLAG "--with-android-xml-schema-path=${XML_SCHEMA_PATH}")
+endif ()
+
+
 # --disable-option-checking  ignore unrecognized --enable/--with options
 # --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
 # --enable-FEATU " RE[=ARG]  include FEATURE [ARG=yes]
@@ -141,96 +100,6 @@ message(STATUS "Current HIDRD_XML_FORMAT_FLAG " ${HIDRD_XML_FORMAT_FLAG})
 # --disable-spec-format   disable building specification example format  #                         support (requires tokens and names)
 # --disable-code-format   disable building source code format support  #                         (requires specification example format)
 
-if (ANDROID_BUILD)
-
-    # Toolchain.
-    if (CMAKE_HOST_SYSTEM_NAME STREQUAL Linux)
-        set(ANDROID_HOST_TAG linux-x86_64)
-    elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL Darwin)
-        set(ANDROID_HOST_TAG darwin-x86_64)
-    elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
-        set(ANDROID_HOST_TAG windows-x86_64)
-    endif (CMAKE_HOST_SYSTEM_NAME STREQUAL Linux)
-
-    if (ANDROID_ABI STREQUAL armeabi-v7a)
-        set(COMPILER_ROOT ${ANDROID_NDK}/armv7a-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-        set(ANDROID_TRIPLE arm-linux-androideabi)
-        set(ANDROID_SYSROOT_ABI arm)
-        set(CMAKE_INSTALL_LIBDIR lib)
-        set(CMAKE_SYSTEM_PROCESSOR armv7-a)
-
-    elseif (ANDROID_ABI STREQUAL arm64-v8a)
-        set(COMPILER_ROOT ${ANDROID_NDK}/aarch64-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-        set(ANDROID_TRIPLE aarch64-linux-android)
-        set(ANDROID_SYSROOT_ABI arm64)
-        set(CMAKE_INSTALL_LIBDIR lib64)
-        set(CMAKE_SYSTEM_PROCESSOR aarch64)
-
-    elseif (ANDROID_ABI STREQUAL x86_64)
-        set(COMPILER_ROOT ${ANDROID_NDK}/x86_64-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-        set(ANDROID_TRIPLE x86_64-linux-android)
-        set(ANDROID_SYSROOT_ABI x86_64)
-        set(CMAKE_INSTALL_LIBDIR lib64)
-        set(CMAKE_SYSTEM_PROCESSOR x86_64)
-
-    elseif (ANDROID_ABI STREQUAL x86)
-        set(COMPILER_ROOT ${ANDROID_NDK}/i686-none-linux-android${ANDROID_NATIVE_API_LEVEL})
-        set(ANDROID_TRIPLE i686-linux-android)
-        set(ANDROID_SYSROOT_ABI x86)
-        set(CMAKE_INSTALL_LIBDIR lib)
-        set(CMAKE_SYSTEM_PROCESSOR i686)
-        set(CMAKE_SIZEOF_VOID_P 4)
-
-    endif (ANDROID_ABI STREQUAL armeabi-v7a)
-
-    set(CMAKE_GCC_TOOLCHAIN ${ANDROID_NDK}/toolchains/${ANDROID_TRIPLE}-4.9/prebuilt/${ANDROID_HOST_TAG})
-    set(ANDROID_LLVM_TOOLCHAIN_PREFIX "${COMPILER_ROOT}/bin/")
-    set(CMAKE_SYSROOT ${COMPILER_ROOT}/sysroot)
-    set(CMAKE_C_FLAGS "-g -O0  -Wno-null-pointer-arithmetic -w -Wno-error -Wno-unused-command-line-argument --sysroot=${CMAKE_SYSROOT} --gcc-toolchain=${CMAKE_GCC_TOOLCHAIN}  ${LOG_LIB}")
-
-    if (NOT EXISTS COMPILER_ROOT)
-        message(STATUS "Installing standalone toochain for ${ANDROID_SYSROOT_ABI} apilevel-${ANDROID_NATIVE_API_LEVEL} ...")
-        execute_process(COMMAND python ${ANDROID_NDK}/build/tools/make_standalone_toolchain.py --arch ${ANDROID_SYSROOT_ABI} --api ${ANDROID_NATIVE_API_LEVEL} --install-dir ${COMPILER_ROOT})
-    endif ()
-    #      if(SYSROOT_INSTALL)
-    #   set(CMAKE_INSTALL_PREFIX  ${CMAKE_SYSROOT})
-    #  endif
-    unset(CMAKE_C_COMPILER)
-    set(CMAKE_C_COMPILER ${ANDROID_LLVM_TOOLCHAIN_PREFIX}${ANDROID_TRIPLE}-gcc)
-    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--with-sysroot=${CMAKE_SYSROOT}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}")
-    list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dist/${ANDROID_SYSROOT_ABI}${CMAKE_INSTALL_PREFIX}")
-    find_library(LOG_LIB log)
-
-else ()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w -Wno-error -Werror=implicit-function-declaration")
-    set(HIDRD_CONFIGURE_COMMAND "CC=${CMAKE_C_COMPILER} " "CFLAGS=${CMAKE_C_FLAGS}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_SHARED_FLAG}" "${HIDRD_STATIC_FLAG}" "${HIDRD_XML_FORMAT_FLAG}")
-endif ()
-
-set(PYTHON_CFLAGS -I${COMPILER_ROOT}/include/python2.7)
-set(PYTHON_LDFLAGS -L${COMPILER_ROOT}/lib/python2.7)
-set(ENV{PATH} ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH})
-set(ENV{PKG_CONFIG_PATH} "/home/anthony/Documents/Source/Android/ndk/hidrd/cmake-build-release/.deps/libxz/dist/x86/usr/lib/pkgconfig")
-
-list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}")
-set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT})
-message(STATUS "Current ANDROID_NDK " ${ANDROID_NDK})
-message(STATUS "Current COMPILER_ROOT " ${COMPILER_ROOT})
-message(STATUS "Current SYSROOT " ${CMAKE_SYSROOT})
-message(STATUS "Current ANDROID_ABI " ${ANDROID_ABI})
-message(STATUS "Current ANDROID_NATIVE_API_LEVEL " ${ANDROID_NATIVE_API_LEVEL})
-message(STATUS "Current CMAKE_C_COMPILER " ${CMAKE_C_COMPILER})
-message(STATUS "Current CMAKE_C_FLAGS " ${CMAKE_C_FLAGS})
-message(STATUS "Current ENV PATH " $ENV{PATH})
-message(STATUS "Current TMP_DIR " ${TMP_DIR})
-message(STATUS "Current STAMP_DIR " ${STAMP_DIR})
-message(STATUS "Current GIT_EXECUTABLE " ${GIT_EXECUTABLE})
-message(STATUS "Current CMAKE_INSTALL_LIBDIR " ${CMAKE_INSTALL_LIBDIR})
-message(STATUS "Current SYSROOT_INSTALL " ${SYSROOT_INSTALL})
-message(STATUS "Current CMAKE_CURRENT_BINARY_DIR " ${CMAKE_CURRENT_BINARY_DIR})
-message(STATUS "Current CMAKE_INSTALL_PREFIX " ${CMAKE_INSTALL_PREFIX})
-message(STATUS "Current CMAKE_SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P}")
-message(STATUS "Current CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH}")
-message(STATUS "Current CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}")
 message(STATUS "Current XML_SCHEMA_PATH ${XML_SCHEMA_PATH}")
 message(STATUS "Current ANDROID_ASSETS_LOCATION ${ANDROID_ASSETS_LOCATION}")
 message(STATUS "Current ANDROID_JNILIBS_LOCATION ${ANDROID_JNILIBS_LOCATION}")
@@ -254,13 +123,13 @@ if (HIDRD_XML_FORMAT)
         set(XML2_CONFIG_LOCATION ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
     endif ()
 
-    message(STATUS "Current XML2_CONFIG_LOCATION ${XML2_CONFIG_LOCATION}")
+
     find_package(LIBXML2)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBLZMA liblzma)
 
     message(STATUS "Current PkgConfig ${PKG_CONFIG_EXECUTABLE}")
-
+    message(STATUS "Current CMAKE_CONFIGURE_COMMAND ${CMAKE_CONFIGURE_COMMAND}  ")
     if (LIBLZMA_FOUND)
         message(STATUS "Current LIBLZMA_PREFIX  ${LIBLZMA_PREFIX}")
     endif ()
@@ -304,7 +173,7 @@ if (HIDRD_XML_FORMAT)
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXZ_DIR}/build/${ANDROID_ABI}
                 CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXZ_DIR}
                 COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-                COMMAND ${LIBXZ_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}"
+                COMMAND ${LIBXZ_DIR}/configure ${CMAKE_CONFIGURE_COMMAND}
                 BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
                 COMMAND ${CMAKE_MAKE_PROGRAM} -j8
                 INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -329,7 +198,7 @@ if (HIDRD_XML_FORMAT)
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBXML2_DIR}/build/${ANDROID_ABI}
                 CONFIGURE_COMMAND autoreconf -if -Wall ${LIBXML2_DIR}
                 COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
-                COMMAND ${LIBXML2_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}" --with-python=${COMPILER_ROOT}/bin --with-lzma=${LIBXZ_DIST_DIR}
+                COMMAND ${LIBXML2_DIR}/configure ${CMAKE_CONFIGURE_COMMAND} --with-python=${COMPILER_ROOT}/bin --with-lzma=${LIBXZ_DIST_DIR}
                 BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
                 COMMAND ${CMAKE_MAKE_PROGRAM} -j8
                 INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -355,11 +224,7 @@ if (HIDRD_XML_FORMAT)
 endif ()
 
 
-find_package(Git)
-#can either be built inline or from external git repo
-
-set(HIDRD_ARMEABI_FLAG "--with-armeabi=${ANDROID_ABI}")
-
+##################################################/// START OF HIDRD BUILD CONFIG ///##################################################
 
 find_package(HIDRD)
 
@@ -375,10 +240,8 @@ if (HIDRD_FOUND)
         set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
     endif ()
 
-
     list(APPEND CMAKE_FIND_ROOT_PATH "${HIDRD_INSTALL_PREFIX}")
 
-    #string(RANDOM LENGTH 5   EXVAR )
     if (ANDROID_JNILIBS_LOCATION AND NOT ANDROID_JNILIBS_LOCATION STREQUAL "")
         file(MAKE_DIRECTORY ${ANDROID_JNILIBS_LOCATION})
         message(STATUS "Creating  ANDROID_JNILIBS_LOCATION directory: ${ANDROID_JNILIBS_LOCATION}")
@@ -391,7 +254,7 @@ if (HIDRD_FOUND)
     set(distname hidrd-export${EXVAR})
 else ()
     set(distname hidrd-build)
-
+    set(HIDRD_ARMEABI_FLAG "--with-armeabi=${ANDROID_ABI}")
     set(HIDRD_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd)
     set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
     set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
@@ -399,10 +262,9 @@ else ()
     list(APPEND CMAKE_FIND_ROOT_PATH "${HIDRD_INSTALL_PREFIX}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LOG_LIB}")
     set(XML2_CONFIG_LOCATION_FLAG "--with-xml2-config=${XML2_CONFIG_LOCATION}")
+    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--prefix=${CMAKE_INSTALL_PREFIX}" "--with-sysroot=${CMAKE_SYSROOT}" "${SHARED_FLAG}" "${STATIC_FLAG}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} ${LOG_LIB}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_XML_FORMAT_FLAG}" "${XML2_CONFIG_LOCATION_FLAG}" "${HIDRD_ARMEABI_FLAG}" "${XML_SCHEMA_PATH_FLAG}")
 
-
-    set(HIDRD_CONFIGURE_COMMAND ${HIDRD_CONFIGURE_COMMAND} "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}" ${HIDRD_CMAKE_WRAPPER_FLAG} ${HIDRD_XML_FORMAT_FLAG} ${XML2_CONFIG_LOCATION_FLAG} ${HIDRD_ARMEABI_FLAG} ${XML_SCHEMA_PATH_FLAG})
-
+    message(STATUS "Current HIDRD_CONFIGURE_COMMAND ${HIDRD_CONFIGURE_COMMAND}")
 
     if (NOT HIDRD_REMOTE)
         message(STATUS "Current HIDRD_DIR ${HIDRD_DIR}")
@@ -425,7 +287,7 @@ else ()
             COMMAND ${CMAKE_COMMAND} -E make_directory ${HIDRD_DIST_DIR}
             PREFIX ${HIDRD_DIR}/build/${ANDROID_ABI}
             CONFIGURE_COMMAND autoreconf -if -Wall ${HIDRD_DIR}
-            COMMAND ${HIDRD_DIR}/configure ${HIDRD_CONFIGURE_COMMAND} "--prefix=${CMAKE_INSTALL_PREFIX}"
+            COMMAND ${HIDRD_DIR}/configure ${HIDRD_CONFIGURE_COMMAND}
             BUILD_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
             COMMAND ${CMAKE_MAKE_PROGRAM} -j8
             INSTALL_COMMAND export PATH=${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin:$ENV{PATH}
@@ -434,7 +296,6 @@ else ()
             TMP_DIR ${TMP_DIR}
             DEPENDS autotools_XML2
             )
-
 
     if (NOT EXISTS ${HIDRD_INCLUDE_DIRS})
         set(HIDRD_INCLUDE_DIRS ${HIDRD_INSTALL_PREFIX}/include)
@@ -451,6 +312,7 @@ else ()
     endforeach ()
 
 endif (HIDRD_FOUND)
+
 message(STATUS "Current XML2_CONFIG_LOCATION :")
 execute_process(COMMAND ${XML2_CONFIG_LOCATION} --libs RESULT_VARIABLE RVAR)
 execute_process(COMMAND ${XML2_CONFIG_LOCATION} --cflags RESULT_VARIABLE RVAR)
@@ -493,11 +355,13 @@ endif (HIDRD_XML_FORMAT)
 set(CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/hidrd")
 set(INCLUDE_INSTALL_DIR "include")
 set(INSTALL_DIR "")
+
 ## LIBRARY VERSION
 set(hidrd_SOVERSION 0)
 set(hidrd_API_VERSION 2)
 set(hidrd_lib_PATCH_VERSION 0)
 set(hidrd_VERSION ${hidrd_SOVERSION}.${hidrd_API_VERSION}.${hidrd_PATCH_VERSION})
+
 # GENERATE hidrd-config* FILES
 configure_package_config_file(
         cmake/hidrd-config.cmake.in
@@ -598,33 +462,3 @@ if (NOT ANDROID_ASSETS_LOCATION STREQUAL "" AND ANDROID_ASSETS_LOCATION)
     endif (HIDRD_XML_ENABLE)
 endif ()
 
-
-# Get all propreties that cmake supports
-execute_process(COMMAND cmake --help-property-list OUTPUT_VARIABLE CMAKE_PROPERTY_LIST)
-
-# Convert command output into a CMake list
-STRING(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
-STRING(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
-
-function(print_properties)
-    message(STATUS "properties: CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
-endfunction(print_properties)
-
-function(print_target_properties tgt)
-    if (NOT TARGET ${tgt})
-        message(ERROR "There is no target named '${tgt}'")
-        return()
-    endif ()
-
-    foreach (prop ${CMAKE_PROPERTY_LIST})
-        string(REPLACE "<CONFIG>" "${CMAKE_BUILD_TYPE}" prop ${prop})
-        if (prop STREQUAL "LOCATION" OR prop MATCHES "^LOCATION_" OR prop MATCHES "_LOCATION$")
-            continue()
-        endif ()
-        get_property(propval TARGET ${tgt} PROPERTY ${prop} SET)
-        if (propval)
-            get_target_property(propval ${tgt} ${prop})
-            message(STATUS "${tgt} ${prop} = ${propval}")
-        endif ()
-    endforeach (prop)
-endfunction(print_target_properties)

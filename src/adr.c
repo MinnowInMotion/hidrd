@@ -31,14 +31,28 @@
 #include <unistd.h>
 #include <strings.h>
 #include <string.h>
-#include <stdio.h>
-#include <getopt.h>
 #include "hidrd/util/str.h"
 #include "hidrd/util/fd.h"
 #include "hidrd/fmt.h"
-#include "hidrd/adr/adr.h"
+#include "hidrd/strm/src/inst.h"
+#include <android/log.h>
 
-static int process(const char *input_name, const char *input_fmt_name, const char *input_options, const char *output_name, const char *output_fmt_name, const char *output_options) {
+#include "adr.h"
+
+#define  LOG_TAG    "com.claydonkey.hidrdtest"
+
+#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+#define  fprintf(FILE, ...)  if(FILE==NULL) \
+            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__); \
+            else  \
+            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
+
+static int process (const char *input_name, const char *input_fmt_name, const char *input_options,
+                    const char *output_name, const char *output_fmt_name,
+                    const char *output_options)
+{
   int result = 1;
 
   int input_fd = -1;
@@ -74,34 +88,37 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
   /*
    * Lookup and initialize input and output formats
    */
-  input_fmt = hidrd_fmt_list_lkp(input_fmt_name);
-
+  input_fmt = hidrd_fmt_list_lkp (input_fmt_name);
 
   if (input_fmt == NULL) {
     fprintf(stderr, "Unknown input format \"%s\".\n\n", input_fmt_name);
     goto cleanup;
   }
-  if (!hidrd_fmt_readable(input_fmt)) {
-    fprintf(stderr, "Reading of %s format is not supported.\n\n", input_fmt->desc);
+  if (!hidrd_fmt_readable (input_fmt)) {
+    fprintf(stderr,
+            "Reading of %s format is not supported.\n\n",
+            input_fmt->desc);
     goto cleanup;
   }
-  if (!hidrd_fmt_init(input_fmt)) {
+  if (!hidrd_fmt_init (input_fmt)) {
     goto cleanup;
   }
 
-  output_fmt = hidrd_fmt_list_lkp(output_fmt_name);
-
+  output_fmt = hidrd_fmt_list_lkp (output_fmt_name);
 
   if (output_fmt == NULL) {
     fprintf(stderr, "Unknown output format \"%s\".\n\n", output_fmt_name);
     goto cleanup;
   }
-  if (!hidrd_fmt_writable(output_fmt)) {
-    fprintf(stderr, "Writing to %s format is not supported.\n\n", output_fmt->desc);
+  if (!hidrd_fmt_writable (output_fmt)) {
+    fprintf(stderr,
+            "Writing to %s format is not supported.\n\n",
+            output_fmt->desc);
     goto cleanup;
   }
-  if (!hidrd_fmt_init(output_fmt)) {
-    fprintf(stderr, "Failed to initialize %s format library\n", output_fmt->desc);
+  if (!hidrd_fmt_init (output_fmt)) {
+    fprintf(stderr, "Failed to initialize %s format library\n",
+            output_fmt->desc);
     goto cleanup;
   }
 
@@ -112,22 +129,22 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
   if (input_name[0] == '-' && input_name[1] == '\0')
     input_fd = STDIN_FILENO;
   else {
-    input_fd = open(input_name, O_RDONLY);
+    input_fd = open (input_name, O_RDONLY);
     if (input_fd < 0) {
-      fprintf(stderr, "Failed to open input: %s\n", strerror(errno));
+      fprintf(stderr, "Failed to open input: %s\n", strerror (errno));
       goto cleanup;
     }
   }
   if (output_name[0] == '-' && output_name[1] == '\0')
     output_fd = STDOUT_FILENO;
   else {
-    output_fd = open(output_name,
-            O_WRONLY | O_CREAT | O_TRUNC,
-            S_IRUSR | S_IWUSR |
-            S_IRGRP | S_IWGRP |
-            S_IROTH | S_IWOTH);
+    output_fd = open (output_name,
+                      O_WRONLY | O_CREAT | O_TRUNC,
+                      S_IRUSR | S_IWUSR |
+                      S_IRGRP | S_IWGRP |
+                      S_IROTH | S_IWOTH);
     if (output_fd < 0) {
-      fprintf(stderr, "Failed to open output: %s\n", strerror(errno));
+      fprintf(stderr, "Failed to open output: %s\n", strerror (errno));
       goto cleanup;
     }
   }
@@ -135,19 +152,23 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
   /*
    * Read the whole input file
    */
-  if (!hidrd_fd_read_whole(input_fd, &input_buf, &input_size)) {
+  if (!hidrd_fd_read_whole (input_fd, &input_buf, &input_size)) {
 
-    printf("Failed at function \"hidrd_fd_read_whole\"    %s\n", (char *)input_buf);//strerror(errno));
+    fprintf(stderr, "Failed to read input:  \"hidrd_fd_read_whole\"    %s\n", strerror (errno));
 
     /* test for native method "fopen"  opening file*/
-    FILE* file = fopen(input_name, "w+");
+    FILE *file = fopen (input_name, "w+");
 
     if (file != NULL) {
-      fprintf(NULL, "Read  input:  \"hidrd_fd_read_whole\"  External Storage Path =  %s\n", input_name);
-      fflush(file);
-      fclose(file);
+      fprintf(stderr,
+              "Read  input:  \"hidrd_fd_read_whole\"  External Storage Path =  %s\n",
+              input_name);
+      fflush (file);
+      fclose (file);
     } else {
-      fprintf(stderr, "Failed to open input: \"hidrd_fd_read_whole\" External Storage Path =  %s\n", input_name);
+      fprintf(stderr,
+              "Failed to open input: \"hidrd_fd_read_whole\" External Storage Path =  %s\n",
+              input_name);
     }
     goto cleanup;
   }
@@ -155,43 +176,46 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
   /*
    * Open input and output streams
    */
-  input = hidrd_src_new_opts(input_fmt->src, &err, input_buf, input_size, input_options);
+  input = hidrd_src_new_opts (input_fmt->src, &err, input_buf, input_size, input_options);
   if (input == NULL) {
     fprintf(stderr, "Failed to open input stream:\n%s\n", err);
     goto cleanup;
   }
-  free(err);
+  free (err);
   err = NULL;
 
-  output = hidrd_snk_new_opts(output_fmt->snk, &err, &output_buf, &output_size, output_options);
+  output = hidrd_snk_new_opts (output_fmt->snk, &err, &output_buf, &output_size, output_options);
   if (output == NULL) {
     fprintf(stderr, "Failed to open output stream:\n%s\n", err);
     goto cleanup;
   }
-  free(err);
+  free (err);
   err = NULL;
 
   /*
    * Transfer the stream
    */
-  while (pos = hidrd_src_getpos(input), ((item = hidrd_src_get(input)) != NULL))
-    if (!hidrd_snk_put(output, item)) {
-      fprintf(stderr, "Failed to write output stream:\n%s\n", (err = hidrd_snk_errmsg(output)));
+  while (pos = hidrd_src_getpos (input), ((item = hidrd_src_get (input)) != NULL))
+    if (!hidrd_snk_put (output, item)) {
+      fprintf(stderr, "Failed to write output stream:\n%s\n",
+              (err = hidrd_snk_errmsg (output)));
       goto cleanup;
     }
 
-  if (hidrd_src_error(input)) {
-    fprintf(stderr, "Failed to read input item at %s:\n%s\n", (posstr = hidrd_src_fmtpos(input, pos)), (err = hidrd_src_errmsg(input)));
+  if (hidrd_src_error (input)) {
+    fprintf(stderr, "Failed to read input item at %s:\n%s\n",
+            (posstr = hidrd_src_fmtpos (input, pos)), (err = hidrd_src_errmsg (input)));
     goto cleanup;
   }
 
   /*
    * Close input and output streams
    */
-  hidrd_src_delete(input);
+  hidrd_src_delete (input);
   input = NULL;
-  if (!hidrd_snk_close(output)) {
-    fprintf(stderr, "Failed to close output stream:\n%s\n", (err = hidrd_snk_errmsg(output)));
+  if (!hidrd_snk_close (output)) {
+    fprintf(stderr, "Failed to close output stream:\n%s\n",
+            (err = hidrd_snk_errmsg (output)));
     goto cleanup;
   }
   output = NULL;
@@ -199,71 +223,123 @@ static int process(const char *input_name, const char *input_fmt_name, const cha
   /*
    * Write the output file
    */
-  if (!hidrd_fd_write_whole(output_fd, output_buf, output_size)) {
-    fprintf(stderr, "Failed to write output stream: %s\n", strerror(errno));
+  if (!hidrd_fd_write_whole (output_fd, output_buf, output_size)) {
+    fprintf(stderr,
+            "Failed to write output stream: %s\n",
+            strerror (errno));
     goto cleanup;
   }
 
   /* Success! */
   result = 0;
 
-cleanup:
+  cleanup:
 
-  free(posstr);
-  free(err);
+  free (posstr);
+  free (err);
 
-  hidrd_src_delete(input);
-  hidrd_snk_delete(output);
+  hidrd_src_delete (input);
+  hidrd_snk_delete (output);
 
-  free(output_buf);
-  free(input_buf);
+  free (output_buf);
+  free (input_buf);
 
   if (input_fd >= 0 && input_fd != STDIN_FILENO)
-    close(input_fd);
+    close (input_fd);
   if (output_fd >= 0 && output_fd != STDOUT_FILENO)
-    close(output_fd);
+    close (output_fd);
 
   if (output_fmt != NULL)
-    hidrd_fmt_clnp(output_fmt);
+    hidrd_fmt_clnp (output_fmt);
   if (input_fmt != NULL)
-    hidrd_fmt_clnp(input_fmt);
+    hidrd_fmt_clnp (input_fmt);
 
   return result;
 }
 
-static int stop = 0;
-static int check = 0;
+/*
+ * Class:     com_claydonkey_hidrd_FilePicker
+ * Method:    hidrd_Xml_Code_PairPass
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Landroid/util/Pair;)V
+ */
+JNIEXPORT void JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code_1PairPass
+    (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFle, jobject obj2)
+{
+  jclass obj_Pair = (*env)->GetObjectClass (env, obj2);
+  jstring _string = (*env)->NewStringUTF (env, "Foo");
+  jint _integer = 1;
+  jfieldID first = (jclass) (*env)->GetFieldID (env, obj_Pair, "first", "I");
+  jfieldID second = (jclass) (*env)->GetFieldID (env, obj_Pair, "second", "Ljava/lang/String;");
+  (*env)->SetIntField (env, obj_Pair, first, _integer);
+  (*env)->SetObjectField (env, obj_Pair, second, _string);
+  jmethodID ctor_Pair = (jclass) (*env)->GetMethodID (env, obj_Pair, "<init>",
+                                                      "(ILjava/lang/String;)(V)");
 
-JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrd_FilePicker_convertXMLtoCode
-(JNIEnv * env, jobject obj, jstring jinFile, jstring joutFile) {
+  if (ctor_Pair == NULL) {
+    LOGE("%s, GetMethodID nullptr\n", __func__);
+
+  }
+}
+/*
+ * Class:     com_claydonkey_hidrd_FilePicker
+ * Method:    hidrd_Xml_Code_Pair
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)Landroid/util/Pair;
+ */
+JNIEXPORT jobject JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code_1Pair
+    (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFile)
+{
+
+  jstring _string = (*env)->NewStringUTF (env, "Foo");
+  jint _integer = 1;
+  jclass cls_Pair = (jclass) (*env)->FindClass (env, "android/util/Pair");
+  jmethodID ctor_Pair = (jclass) (*env)->GetMethodID (env, cls_Pair, "<init>", "(ILjava/lang/String;)(V)");
+
+  if (ctor_Pair == NULL) {
+    LOGE("%s, GetMethodID nullptr\n", __func__);
+    return NULL;
+  }
+
+  jobject obj_Pair = (jclass) (*env)->NewObject (env, cls_Pair, ctor_Pair, _integer, _string);
+
+  jfieldID first = (jclass) (*env)->GetFieldID (env, obj_Pair, "First", "I");
+  jfieldID second = (jclass) (*env)->GetFieldID (env, obj_Pair, "Second", "Ljava/lang/String;");
+  (*env)->SetIntField (env, obj_Pair, first, _integer);
+  (*env)->SetObjectField (env, obj_Pair, second, _string);
+  return obj_Pair;
+}
+
+/*
+ * Class:     com_claydonkey_hidrd_FilePicker
+ * Method:    hidrd_Xml_Code
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code
+    (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFile)
+{
 
   const char *input_fmt_name = "xml";
   const char *output_fmt_name = "code";
 
-  char resbuffer [25];
-  const char *inFile = (*env)->GetStringUTFChars(env, jinFile, 0);
-  const char *outFile = (*env)->GetStringUTFChars(env, joutFile, 0);
+  char resbuffer[25];
+  const char *inFile = (*env)->GetStringUTFChars (env, jinFile, 0);
+  const char *outFile = (*env)->GetStringUTFChars (env, joutFile, 0);
 
   /* Test Storage Path is the same as that passed into function*/
-  jclass cls_File = (jclass) (*env)->FindClass(env, "java/io/File");
-  jclass cls_Env = (jclass) (*env)->FindClass(env, "android/app/NativeActivity");
-  jmethodID mid_getExtStorage = (*env)->GetMethodID(env, cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
-  jobject obj_File = (*env)->CallObjectMethod(env, obj, mid_getExtStorage, NULL);
-  jmethodID mid_getPath = (*env)->GetMethodID(env, cls_File, "getPath", "()Ljava/lang/String;");
-  jobject obj_Path = (jstring) (*env)->CallObjectMethod(env, obj_File, mid_getPath);
-  const char* path = (*env)->GetStringUTFChars(env, obj_Path, NULL);
-  fprintf(NULL, "External Storage Path from JNI %s\n", path);
-  (*env)->ReleaseStringUTFChars(env, obj_Path, path);
-  while (stop) {
-    usleep(1000);
-    check++;
-  }
-  int result = process(inFile, input_fmt_name, "", outFile, output_fmt_name, "");
-  (*env)->ReleaseStringUTFChars(env, jinFile, inFile);
-  (*env)->ReleaseStringUTFChars(env, joutFile, outFile);
-  sprintf(resbuffer, "%i returned from hidrd", result);
+  jclass cls_File = (jclass) (*env)->FindClass (env, "java/io/File");
+  jclass cls_Env = (jclass) (*env)->FindClass (env, "android/app/NativeActivity");
+  jmethodID mid_getExtStorage = (*env)->GetMethodID (env, cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
+  jobject obj_File = (*env)->CallObjectMethod (env, obj, mid_getExtStorage, NULL);
+  jmethodID mid_getPath = (*env)->GetMethodID (env, cls_File, "getPath", "()Ljava/lang/String;");
+  jobject obj_Path = (jstring) (*env)->CallObjectMethod (env, obj_File, mid_getPath);
+  const char *path = (*env)->GetStringUTFChars (env, obj_Path, NULL);
 
-  return (*env)->NewStringUTF(env, resbuffer);
+  (*env)->ReleaseStringUTFChars (env, obj_Path, path);
 
+  int result = process (inFile, input_fmt_name, "", outFile, output_fmt_name, "");
+  (*env)->ReleaseStringUTFChars (env, jinFile, inFile);
+  (*env)->ReleaseStringUTFChars (env, joutFile, outFile);
+  sprintf (resbuffer, "%i returned from hidrd", result);
+
+  return (*env)->NewStringUTF (env, resbuffer);
 
 }

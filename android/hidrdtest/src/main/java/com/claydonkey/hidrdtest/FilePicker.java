@@ -254,7 +254,7 @@ public class FilePicker extends ListActivity {
 
     public native Pair<Integer, String> hidrd_Xml_Code_Pair(String inFile, String outFile);
 
-    public native void hidrdtest_Xml_Code_PairPass(String inFile, String outFile, Pair<Integer, String> chg);
+    public native void hidrd_Xml_Code_PairPass(String inFile, String outFile, Pair<Integer, String> chg);
 
     /* this is used to load the
             buf = new_buf; library on application

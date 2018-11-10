@@ -23,6 +23,8 @@ Makefile
 
 *.tar.gz
 
+/android2
+
 /android/gen/
 
 /android/hidrdtest/app/build/
@@ -88,3 +90,7 @@ android/hidrdtest/src/main/assets/xml/schema/hidrd\.xsd
 android/hidrdtest/src/main/assets/mouse_descriptor\.code
 
 config\.h\.in~
+
+android/hidrdinline/src/main/assets/mouse_descriptor\.xml
+
+android/hidrdinline/src/main/assets/hidrd\.xsd
