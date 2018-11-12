@@ -1,0 +1,99 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/hidrd-targets.cmake")
+
+set_and_check(HIDRD_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(HIDRD_INSTALL_PREFIX "@PACKAGE_INSTALL_DIR@")
+
+if (HIDRD_LIBS AND HIDRD_INCLUDE_DIRS)
+  # in cache already
+
+else (HIDRD_LIBS AND HIDRD_INCLUDE_DIRS)
+
+  set(SEARCH_PATHS
+        /usr/include
+        /usr/local/include
+        /opt/local/include
+        /sw/include
+        )
+
+  find_path(HIDRD_INCLUDE_DIR
+    NAMES
+        cfg.h
+        fmt.h
+        item.h
+        opt.h
+        strm.h
+    PATHS ${SEARCH_PATHS}
+    PATH_SUFFIXES
+	hidrd
+   )
+
+    find_library(HIDRD_ADR_LIB
+    NAMES
+      hidrd_adr
+    PATHS ${SEARCH_PATHS}
+    )
+   find_library(HIDRD_FMT_LIB 
+    NAMES
+      hidrd_fmt
+    PATHS ${SEARCH_PATHS}
+    )
+   find_library(HIDRD_ITEM_LIB
+    NAMES
+      hidrd_item
+    PATHS ${SEARCH_PATHS}
+    )
+  find_library(HIDRD_STRM_LIB 
+    NAMES
+      hidrd_strm
+    PATHS ${SEARCH_PATHS}
+  )
+  find_library(HIDRD_OPT_LIB 
+    NAMES
+      hidrd_opt
+    PATHS ${SEARCH_PATHS}
+  )
+  find_library(HIDRD_UTIL_LIB 
+    NAMES
+      hidrd_util
+    PATHS ${SEARCH_PATHS}
+  )
+find_library(HIDRD_USAGE_LIB 
+    NAMES
+      hidrd_usage
+    PATHS ${SEARCH_PATHS}
+  )
+
+  get_filename_component(HIDRD_INCLUDE_DIRS ${HIDRD_INCLUDE_DIR} PATH)
+
+  set(HIDRD_LIBS
+    ${HIDRD_ADR_LIB}
+    ${HIDRD_FMT_LIB}
+    ${HIDRD_STRM_LIB}
+    ${HIDRD_ITEM_LIB}
+    ${HIDRD_USAGE_LIB}
+    ${HIDRD_UTIL_LIB}
+    ${HIDRD_OPT_LIB}
+  )
+
+  if (HIDRD_INCLUDE_DIRS AND HIDRD_LIBS)
+     set(HIDRD_FOUND TRUE)
+  endif (HIDRD_INCLUDE_DIRS AND HIDRD_LIBS)
+
+  if (HIDRD_FOUND)
+    if (NOT HIDRD_FIND_QUIETLY)
+      message(STATUS "Found HIDRD:")
+      message(STATUS " - HIDRD_INCLUDE_DIRS: ${HIDRD_INCLUDE_DIRS}")
+      message(STATUS " - HIDRD_LIBS: ${HIDRD_LIBS}")
+    endif (NOT HIDRD_FIND_QUIETLY)
+  else (HIDRD_FOUND)
+    if (HIDRD_FIND_REQUIRED)
+      message(FATAL_ERROR "Could not find HIDRD")
+    endif (HIDRD_FIND_REQUIRED)
+  endif (HIDRD_FOUND)
+
+  # show the HIDRD_INCLUDE_DIRS and HIDRD_LIBS variables only in the advanced view
+  mark_as_advanced(HIDRD_INCLUDE_DIRS HIDRD_LIBS)
+
+endif (HIDRD_LIBS AND HIDRD_INCLUDE_DIRS)

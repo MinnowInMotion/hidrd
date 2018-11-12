@@ -5,15 +5,15 @@ cmake_minimum_required(VERSION 3.4.1)
 #
 # depending on your requirements.
 #
-project(hidrd_tools)
-
+project(hidrd-build)
+include(standalone-bootstrap.cmake)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(ExternalProject)
 
 message(STATUS "OI ${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/standalone-bootstrap.cmake)
+#include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/standalone-bootstrap.cmake)
 find_package(Git)
 
 set(GITXZ https://git.tukaani.org/xz.git CACHE STRING "location of xz git repo")
@@ -28,10 +28,6 @@ option(HIDRD_CONVERT "build hidconvert executable" ON)
 option(HIDRD_XML_FORMAT "build XML format support (requires tokens, names and libxml2)" ON)
 option(HIDRD_CMAKE_WRAPPER "enable cmake wrapper for android" ON)
 
-option(HIDRD_OPT "enable building options library (required by streams)" ON)
-option(HIDRD_STREAMS "enable building stream library (required by formats)" ON)
-option(HIDRD_FORMATS "enable building format library (required by hidrd-convert)" ON)
-option(HIDRD_ANDROID "enable building andioid library " ON)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(HIDRD_DEBUG_FLAG "--enable-debug")
@@ -60,25 +56,6 @@ if (NOT XML_SCHEMA_PATH STREQUAL "")
     set(XML_SCHEMA_PATH_FLAG "--with-android-xml-schema-path=${XML_SCHEMA_PATH}")
 endif ()
 
-if (NOT HIDRD_OPT)
-    set(HIDRD_OPTFLAG "--disable-opt")
-endif ()
-if (NOT HIDRD_STREAMS)
-    set(HIDRD_STREAMS_FLAG "--disable-streams")
-endif ()
-
-if (NOT HIDRD_FORMATS)
-    set(HIDRD_FORMATS_FLAG "--disable-formats")
-endif ()
-
-if (NOT HIDRD_ANDROID)
-    set(HIDRD_ANDROID_FLAG "--disable-android")
-endif ()
-
-
-# --disable-opt           disable building options library (required by                         streams)
-# --disable-streams       disable building stream library (required by                          formats)
-# --disable-formats   
 
 # --disable-option-checking  ignore unrecognized --enable/--with options
 # --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
@@ -94,7 +71,7 @@ endif ()
 # --enable-debug          enable debugging features
 # --enable-tests-install  enable installation of tests
 # --disable-opt           disable building options library (required by                         streams)
-# --disable-streams  disable building stream library (required by formats)
+# --disable-streams       disable building stream library (required by                          formats)
 # --disable-formats       disable building format library (required by                          hidrd-convert)
 # --disable-hidrd-convert disable building hidrd-convert tool (requires                        formats)
 # --enable-cmake-wrapper  enable cmake wrapper for android
@@ -146,14 +123,11 @@ if (HIDRD_XML_FORMAT)
         set(XML2_CONFIG_LOCATION ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/bin/xml2-config)
     endif ()
 
-    if (ANDROID_APP_NAME)
-        set(ANDROID_JNILIBS_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_APP_NAME}/src/main/jniLibs CACHE STRING "Android JNILIBS location")
-        set(ANDROID_ASSETS_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_APP_NAME}/src/main/assets CACHE STRING "Android assets location")
-    endif ()
+
     find_package(LIBXML2)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBLZMA liblzma)
-    list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dist/${ANDROID_SYSROOT_ABI}${CMAKE_INSTALL_PREFIX}")
+
     message(STATUS "Current PkgConfig ${PKG_CONFIG_EXECUTABLE}")
     message(STATUS "Current CMAKE_CONFIGURE_COMMAND ${CMAKE_CONFIGURE_COMMAND}  ")
     if (LIBLZMA_FOUND)
@@ -277,32 +251,32 @@ if (HIDRD_FOUND)
         file(MAKE_DIRECTORY ${ANDROID_ASSETS_LOCATION})
         message(STATUS "Creating  ANDROID_ASSETS_LOCATION directory: ${ANDROID_ASSETS_LOCATION}")
     endif ()
-    set(distname hidrd_tools${EXVAR})
+    set(distname hidrd-export${EXVAR})
 else ()
-    set(distname hidrd_tools)
+    set(distname hidrd-build)
     set(HIDRD_ARMEABI_FLAG "--with-armeabi=${ANDROID_ABI}")
     set(HIDRD_DIR ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd)
     set(HIDRD_DIST_DIR ${HIDRD_DIR}/dist/${ANDROID_ABI})
     set(HIDRD_INSTALL_PREFIX ${HIDRD_DIST_DIR}${CMAKE_INSTALL_PREFIX})
 
     list(APPEND CMAKE_FIND_ROOT_PATH "${HIDRD_INSTALL_PREFIX}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${LOG_LIB}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LOG_LIB}")
     set(XML2_CONFIG_LOCATION_FLAG "--with-xml2-config=${XML2_CONFIG_LOCATION}")
-    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--prefix=${CMAKE_INSTALL_PREFIX}" "--with-sysroot=${CMAKE_SYSROOT}" "${SHARED_FLAG}" "${STATIC_FLAG}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} ${LOG_LIB}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_XML_FORMAT_FLAG}" "${XML2_CONFIG_LOCATION_FLAG}" "${HIDRD_ARMEABI_FLAG}" "${XML_SCHEMA_PATH_FLAG}" "${HIDRD_OPT_FLAG}" "${HIDRD_STREAMS_FLAG}" "${HIDRD_FORMATS_FLAG}" "${HIDRD_ANDROID_FLAG}")
+    set(HIDRD_CONFIGURE_COMMAND "--host=${ANDROID_TRIPLE}${ANDROID_NATIVE_API_LEVEL}" "--prefix=${CMAKE_INSTALL_PREFIX}" "--with-sysroot=${CMAKE_SYSROOT}" "${SHARED_FLAG}" "${STATIC_FLAG}" "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} ${LOG_LIB}" "${HIDRD_DEBUG_FLAG}" "${HIDRD_CMAKE_WRAPPER_FLAG}" "${HIDRD_XML_FORMAT_FLAG}" "${XML2_CONFIG_LOCATION_FLAG}" "${HIDRD_ARMEABI_FLAG}" "${XML_SCHEMA_PATH_FLAG}")
 
     message(STATUS "Current HIDRD_CONFIGURE_COMMAND ${HIDRD_CONFIGURE_COMMAND}")
 
     if (NOT HIDRD_REMOTE)
         message(STATUS "Current HIDRD_DIR ${HIDRD_DIR}")
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cmake DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/lib DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/m4 DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/db DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/configure.ac DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.am DESTINATION ${HIDRD_DIR})
-        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/distcheck-all DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../include DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../lib DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../m4 DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../src DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../db DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../configure.ac DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../Makefile.am DESTINATION ${HIDRD_DIR})
+        file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../distcheck-all DESTINATION ${HIDRD_DIR})
 
     endif ()
     ExternalProject_Add(autotools_HIDRD
@@ -361,48 +335,20 @@ endif (HIDRD_XML_ENABLE)
 message(STATUS "Current HIDRD_INSTALL_PREFIX ${HIDRD_INSTALL_PREFIX}")
 message(STATUS "Current HIDRD_LIBS ${HIDRD_LIBS}")
 message(STATUS "Current HIDRD_INCLUDE_DIRS ${HIDRD_INCLUDE_DIRS}")
-#AUX_SOURCE_DIRECTORY(${HIDRD_DIR}/lib HIDRD_SOURCES) 
 
-FILE(GLOB_RECURSE HIDRD_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd/lib/*.c)
-FILE(GLOB_RECURSE HIDRD_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/.deps/hidrd/dist/${ANDROID_ABI}/*.h)
-add_library(${distname} INTERFACE)
+set(SOURCES ../../src/adr.c)
 
-target_sources(${distname}
-        INTERFACE $<BUILD_INTERFACE:${HIDRD_SOURCES} ${HIDRD_INCLUDES}>
-        )
-
-message(STATUS "HIDRD_INCLUDES ${HIDRD_INCLUDES}")
-message(STATUS "HIDRD_SOURCES ${HIDRD_SOURCES}")
-
+add_library(${distname} SHARED ${SOURCES})
 add_dependencies(${distname} autotools_HIDRD)
-target_link_libraries(${distname}
-        INTERFACE ${LOG_LIB}
-        ${LIBXML2_LIBRARIES}
-        ${HIDRD_LIBS}
-        )
-
+target_link_libraries(${distname} ${LOG_LIB} ${LIBXML2_LIBRARIES} ${HIDRD_LIBS})
 message(STATUS "Current LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIRS}")
 
 if (HIDRD_XML_FORMAT)
-    target_include_directories(${distname} INTERFACE
-            $<BUILD_INTERFACE:${HIDRD_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS}>
-            )
+    target_include_directories(${distname} PRIVATE ${HIDRD_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS})
     add_dependencies(autotools_HIDRD autotools_XML2)
 else ()
-    target_include_directories(${distname} INTERFACE
-            $<BUILD_INTERFACE:${HIDRD_INCLUDE_DIRS}>
-            )
+    target_include_directories(${distname} PRIVATE ${HIDRD_INCLUDE_DIRS})
 endif (HIDRD_XML_FORMAT)
-
-if (HIDRD_XML_FORMAT)
-    target_include_directories(${distname} SYSTEM INTERFACE 
-            $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-    add_dependencies(autotools_HIDRD autotools_XML2)
-else ()
-    target_include_directories(${distname} SYSTEM INTERFACE 
-            $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-endif (HIDRD_XML_FORMAT)
-
 
 #print_target_properties(hidrd-build)
 #INSTALL CMAKE MODULES AND LIBRARY
@@ -474,66 +420,45 @@ install(TARGETS ${distname}
 message(STATUS "HIDRD_INSTALL_PREFIX ${HIDRD_INSTALL_PREFIX}")
 
 
-# if (NOT ANDROID_JNILIBS_LOCATION STREQUAL "" AND ANDROID_JNILIBS_LOCATION)
-#     if (HIDRD_CONVERT)
-#         add_custom_command(
-#                 TARGET ${distname}
-#                 COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/bin/hidrd-convert ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}/libhidrd-convert.so
-#         )
-#  endif()
-#     add_custom_command(
-#             TARGET ${distname}
-#             COMMAND ${CMAKE_COMMAND} -E make_directory ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_item.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_usage.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_util.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#     )
-# endif()
+# add_custom_command(
+# TARGET  hidrd-build
+#           COMMAND  ${CMAKE_MAKE_PROGRAM}  ${HIDRD_DIR}/build/${ANDROID_ABI} DESTDIR=${HIDRD_DIR}/dist/${ANDROID_ABI} install
+# )
+if (NOT ANDROID_JNILIBS_LOCATION STREQUAL "" AND ANDROID_JNILIBS_LOCATION)
+    if (HIDRD_CONVERT)
+        add_custom_command(
+                TARGET ${distname} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/bin/hidrd-convert ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}/libhidrd-convert.so
+        )
+    endif ()
 
-# if(HIDRD_OPT)
-#     add_custom_command(
-#             TARGET ${distname}
-#                         COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_opt.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             )
-#         endif()
+    add_custom_command(
+            TARGET ${distname} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/hidrdtest/src/main/assets
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_adr.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_fmt.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_item.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_opt.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_strm.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_usage.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+            COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_util.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
+    )
+endif ()
 
+if (NOT ANDROID_ASSETS_LOCATION STREQUAL "" AND ANDROID_ASSETS_LOCATION)
+    add_custom_command(
+            TARGET ${distname} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.code ${ANDROID_ASSETS_LOCATION}
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.hex ${ANDROID_ASSETS_LOCATION}
+    )
 
-# if(HIDRD_FORMATS)
-#     add_custom_command(
-#             TARGET ${distname}
-#                         COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_fmt.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             )
-#         endif()
-
-# if(HIDRD_STREAMS)
-#     add_custom_command(
-#             TARGET ${distname}
-#                         COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_strm.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             )
-#         endif()
-
-
-# if(HIDRD_ANDROID)
-#     add_custom_command(
-#             TARGET ${distname}
-#                         COMMAND ${CMAKE_COMMAND} -E copy ${HIDRD_INSTALL_PREFIX}/lib/libhidrd_adr.so ${ANDROID_JNILIBS_LOCATION}/${ANDROID_ABI}
-#             )
-#         endif()
-
-# if (NOT ANDROID_ASSETS_LOCATION STREQUAL "" AND ANDROID_ASSETS_LOCATION)
-#     add_custom_command(
-#             TARGET ${distname}
-
-#             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.code ${ANDROID_ASSETS_LOCATION}
-#             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.hex ${ANDROID_ASSETS_LOCATION}
-#     )
-
-#     if (HIDRD_XML_ENABLE)
-#         add_custom_command(
-#                 TARGET ${distname}
-#                 COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/xml/schema/hidrd.xsd ${ANDROID_ASSETS_LOCATION}
-#                 COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.xml ${ANDROID_ASSETS_LOCATION}
-#         )
-#     endif (HIDRD_XML_ENABLE)
-# endif ()
+    if (HIDRD_XML_ENABLE)
+        add_custom_command(
+                TARGET ${distname} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/xml/schema/hidrd.xsd ${ANDROID_ASSETS_LOCATION}
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/share/mouse_descriptor.xml ${ANDROID_ASSETS_LOCATION}
+        )
+    endif (HIDRD_XML_ENABLE)
+endif ()
 

@@ -1,5 +1,6 @@
 #
 # Copyright (C) 2010 Nikolai Kondrashov
+# Amendments 2018 Anthony Campbell
 #
 # This file is part of hidrd.
 #

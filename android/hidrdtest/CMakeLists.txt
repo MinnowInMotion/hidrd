@@ -1,14 +1,28 @@
 cmake_minimum_required(VERSION 3.4.1)
-project(hidrdtest)
+project(hidrd_adrlocal)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/standalone-bootstrap.cmake)
+#include(hidrd.cmake)
+include(../../cmake/standalone-bootstrap.cmake)
 
-add_library(hidrd_jni SHARED src/main/cpp/hidrd_jni.c)
+add_library(hidrd_adrlocal SHARED ../../lib/adr/adr.c  )
+#add_library(hidrd_adrlocal SHARED src/main/cpp/blank.c  )
+
 find_package(LIBXML2)
-find_library(log-lib log)
+
 find_package(HIDRD)
+message(STATUS "LIBXML2_DIR ${LIBXML2_DIR}")
+message(STATUS "HIDRD_ADR_LIB ${HIDRD_ADR_LIB}")
+message(STATUS "HIDRD_LIBS ${HIDRD_LIBS}")
 
+target_link_libraries(hidrd_adrlocal  PUBLIC ${LOG_LIB}
+        ${HIDRD_LIBS}
+        ${LIBXML2_LIBRARIES}
+        ${HIDRD_ADR_LIB}
+        ${HIDRD_OPT_LIB}
+        ${HIDRD_USAGE_LIB}
+        ${HIDRD_FMT_LIB}
+        ${HIDRD_ITEM_LIB}
+        ${HIDRD_STRM_LIB}
+        ${HIDRD_UTIL_LIB})
+target_include_directories(hidrd_adrlocal PUBLIC   ../../include  ../../cmake-build-release/.deps/hidrd/dist/x86/usr/include  ${LIBXML2_INCLUDE_DIRS})
 
-target_link_libraries(hidrd_jni ${LOG_LIB} ${LIBXML2_LIBRARIES} ${HIDRD_LIBS})
-target_include_directories(hidrd_jni PRIVATE ${HIDRD_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS})

@@ -238,17 +238,25 @@ AC_ARG_ENABLE(
 
 AC_CANONICAL_HOST
 
-case $host_os in
+
+AC_ARG_ENABLE(
+    android,
+    AS_HELP_STRING(
+        [--disable-android],
+        [disable building android code format support)]),
+    [], [
+   case $host_os in
      *android*)
-        enable_android=yes
+        enable_android="yes"
         ;;
      '')
-        enable_android=no
+       enable_android="no"
         ;;
      *)
         AC_MSG_NOTICE([android not present])
         ;;
-esac
+    esac    
+    ])
 
 
 if test "$enable_android" == "yes"; then

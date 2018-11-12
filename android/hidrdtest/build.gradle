@@ -1,17 +1,20 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
+    compileSdkVersion 26
     defaultConfig {
         applicationId "com.claydonkey.hidrdtest"
-        minSdkVersion 24
-        targetSdkVersion 24
+        minSdkVersion 26
+        targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                arguments "-DCMAKE_VERBOSE_MAKEFILE=TRUE"
+                //       arguments  "-DCMAKE_MAKE_PROGRAM=make", "-DCMAKE_C_COMPILER=/home/anthony/Android/Sdk/ndk-bundle/i686-none-linux-android24/bin/i686-linux-android-gcc" ,"-DCMAKE_VERBOSE_MAKEFILE=TRUE" , "-DHIDRD_INSTALL_PREFIX=/usr" ,"-DANDROID_APP_NAME=hidrdtest", "-DXML_SCHEMA_PATH=/storage/emulated/0/Android/data/com.claydonkey.hidrdtest/files/hidrd.xsd", "-DCMAKE_BUILD_TYPE=Debug"
+                arguments  "-DCMAKE_VERBOSE_MAKEFILE=TRUE", "-DCMAKE_BUILD_TYPE=Debug"
+           cFlags "-DINCLUDE_ADR_SO"
+
             }
         }
     }
@@ -19,7 +22,7 @@ android {
         abi {
             enable true
             reset()
-            include  'x86' //,  'armeabi-v7a' 'x86_64', select ABIs to build APKs for
+            include 'x86' //,  'armeabi-v7a' 'x86_64', select ABIs to build APKs for
             universalApk false //generate an additional APK that contains all the ABIs
         }
     }
@@ -38,13 +41,16 @@ android {
         main {
             assets.srcDirs = ['src/main/assets']
             jniLibs.srcDirs = ['src/main/jniLibs']
-            jni.srcDirs = ['../../cmake-build-release/.deps/hidrd/build/x86/include', '../../cmake-build-release/.deps/hidrd/build/x86/lib', '../../cmake-build-release/.deps/hidrd/build/x86/src']
+           jni.srcDirs = ['../../cmake-build-release/.deps/hidrd/include', '../../lib', '../../src']
         }
     }
+    productFlavors {
+    }
+
 }
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:24.0.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:26.0.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'

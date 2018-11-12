@@ -49,6 +49,8 @@
             else  \
             __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
 
+#ifndef INCLUDE_ADR_SO
+
 static int process (const char *input_name, const char *input_fmt_name, const char *input_options,
                     const char *output_name, const char *output_fmt_name,
                     const char *output_options)
@@ -343,3 +345,4 @@ JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1C
   return (*env)->NewStringUTF (env, resbuffer);
 
 }
+#endif

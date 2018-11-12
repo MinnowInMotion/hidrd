@@ -21,7 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "hidrd_jni.h"
+#include <android/log.h>
 
+
+#define  LOG_TAG    "com.claydonkey.hidrdtest"
+
+#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+#define  fprintf(FILE, ...)  if(FILE==NULL) \
+            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__); \
+            else  \
+            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
+
+#ifdef LOCAL_FUNCS
 #include <jni.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -35,21 +49,9 @@
 #include "hidrd/util/fd.h"
 #include "hidrd/fmt.h"
 #include "hidrd/strm/src/inst.h"
-#include <android/log.h>
 
-#include "hidrd_jni.h"
 
-#define  LOG_TAG    "com.claydonkey.hidrdtest"
-
-#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-
-#define  fprintf(FILE, ...)  if(FILE==NULL) \
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__); \
-            else  \
-            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
-
-static int process (const char *input_name, const char *input_fmt_name, const char *input_options,
+static int execute (const char *input_name, const char *input_fmt_name, const char *input_options,
                     const char *output_name, const char *output_fmt_name,
                     const char *output_options)
 {
@@ -73,17 +75,17 @@ static int process (const char *input_name, const char *input_fmt_name, const ch
   size_t pos;
   char *posstr = NULL;
 
-  assert(input_name != NULL);
-  assert(*input_name != '\0');
-  assert(input_fmt_name != NULL);
-  assert(*input_fmt_name != '\0');
-  assert(input_options != NULL);
+  assert (input_name != NULL);
+  assert (*input_name != '\0');
+  assert (input_fmt_name != NULL);
+  assert (*input_fmt_name != '\0');
+  assert (input_options != NULL);
 
-  assert(output_name != NULL);
-  assert(*output_name != '\0');
-  assert(output_fmt_name != NULL);
-  assert(*output_fmt_name != '\0');
-  assert(output_options != NULL);
+  assert (output_name != NULL);
+  assert (*output_name != '\0');
+  assert (output_fmt_name != NULL);
+  assert (*output_fmt_name != '\0');
+  assert (output_options != NULL);
 
   /*
    * Lookup and initialize input and output formats
@@ -337,7 +339,7 @@ JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1C
 
   (*env)->ReleaseStringUTFChars (env, obj_Path, path);
 
-  int result = process (inFile, input_fmt_name, "", outFile, output_fmt_name, "");
+  int result = execute (inFile, input_fmt_name, "", outFile, output_fmt_name, "");
   (*env)->ReleaseStringUTFChars (env, jinFile, inFile);
   (*env)->ReleaseStringUTFChars (env, joutFile, outFile);
   sprintf (resbuffer, "%i returned from hidrd", result);
@@ -345,3 +347,23 @@ JNIEXPORT jstring JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1C
   return (*env)->NewStringUTF (env, resbuffer);
 
 }
+JNIEXPORT void JNICALL Java_com_claydonkey_hidrdtest_FilePicker_hidrd_1Xml_1Code_1PairPass
+    (JNIEnv *env, jobject obj, jstring jinFile, jstring joutFle, jobject obj2)
+{
+  jclass obj_Pair = (*env)->GetObjectClass (env, obj2);
+  jstring _string = (*env)->NewStringUTF (env, "Foo");
+  jint _integer = 1;
+  jfieldID first = (jclass) (*env)->GetFieldID (env, obj_Pair, "first", "I");
+  jfieldID second = (jclass) (*env)->GetFieldID (env, obj_Pair, "second", "Ljava/lang/String;");
+  (*env)->SetIntField (env, obj_Pair, first, _integer);
+  (*env)->SetObjectField (env, obj_Pair, second, _string);
+  jmethodID ctor_Pair = (jclass) (*env)->GetMethodID (env, obj_Pair, "<init>",
+                                                      "(ILjava/lang/String;)(V)");
+
+  if (ctor_Pair == NULL) {
+    LOGE("%s, GetMethodID nullptr\n", __func__);
+
+  }
+}
+
+#endif

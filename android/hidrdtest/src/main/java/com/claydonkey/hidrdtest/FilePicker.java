@@ -51,6 +51,21 @@ import java.io.*;
 
 public class FilePicker extends ListActivity {
 
+
+    static {
+        //System.loadLibrary("hidrd-build");
+        System.loadLibrary("hidrd_adrlocal");
+        System.loadLibrary("hidrd_adr");
+        System.loadLibrary("hidrd_fmt");
+        System.loadLibrary("hidrd_item");
+        System.loadLibrary("hidrd_opt");
+        System.loadLibrary("hidrd_strm");
+        System.loadLibrary("hidrd_usage");
+        System.loadLibrary("hidrd_util");
+        System.loadLibrary("lzma");
+        System.loadLibrary("xml2");
+    }
+
     public final static String EXTRA_FILE_PATH = "file_path";
     public final static String EXTRA_SHOW_HIDDEN_FILES = "show_hidden_files";
     public final static String EXTRA_ACCEPTED_FILE_EXTENSIONS = "accepted_file_extensions";
@@ -259,19 +274,8 @@ public class FilePicker extends ListActivity {
     /* this is used to load the
             buf = new_buf; library on application
      * startup. The library has already been unpacked into
-     * /data/data/com.claydonkey.hidrdtest/lib/hidrd-jni.so at
+     * /data/data/com.claydonkey.hidrdtest/lib/hidrd_jni.so at
      * installation time by the package manager.
      */
-    static {
-        System.loadLibrary("hidrd_jni");
-        System.loadLibrary("hidrd_adr");
-        System.loadLibrary("hidrd_fmt");
-        System.loadLibrary("hidrd_item");
-        System.loadLibrary("hidrd_opt");
-        System.loadLibrary("hidrd_strm");
-        System.loadLibrary("hidrd_usage");
-        System.loadLibrary("hidrd_util");
-        System.loadLibrary("lzma");
-        System.loadLibrary("xml2");
-    }
+
 }
